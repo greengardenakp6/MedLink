@@ -30,8 +30,8 @@
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .typing-cursor::after { content: '|'; animation: blink 1s step-start infinite; }
         @keyframes blink { 50% { opacity: 0; } }
-        .ai-bed-highlight { animation: highlightPulse 2s infinite; border-color: #4f46e5; box-shadow: 0 0 15px rgba(79, 70, 229, 0.4); }
-        .ai-bed-highlight-rough { animation: highlightPulseRough 2s infinite; border-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
+        .ai-bed-highlight { animation: highlightPulse 2s infinite; border-color: #4f46e5; box-shadow: 0 0 15px rgba(79, 70, 229, 0.4); transform: scale(1.05); z-index: 10; }
+        .ai-bed-highlight-rough { animation: highlightPulseRough 2s infinite; border-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); transform: scale(1.05); z-index: 10; }
         @keyframes highlightPulse { 0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); } 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); } }
         @keyframes highlightPulseRough { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         #chat-window { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -50,16 +50,15 @@
             70% { box-shadow: 0 0 0 30px rgba(220, 38, 38, 0); }
             100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
         }
+        .pulse-red { animation: pulse-red 2s infinite; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen w-screen overflow-hidden">
 
     <!-- ================= EMERGENCY OVERLAY (HIDDEN BY DEFAULT) ================= -->
     <div id="emergency-overlay" class="fixed inset-0 z-[100] bg-red-700 hidden flex flex-col items-center justify-center text-white transition-opacity duration-500 backdrop-blur-sm">
-        <!-- Content injected via JS -->
         <div id="emergency-content" class="text-center relative z-10 p-8 max-w-2xl w-full"></div>
-        <!-- Background Pulse Animation -->
-        <div class="absolute inset-0 bg-red-600 animate-pulse-red pointer-events-none"></div>
+        <div class="absolute inset-0 bg-red-600 pulse-red pointer-events-none"></div>
     </div>
 
     <!-- ================= AUTH SCREEN ================= -->
@@ -155,13 +154,13 @@
     <script>
         // --- 1. FIREBASE CONFIGURATION ---
         const firebaseConfig = {
-            // apiKey: "...",
-            // authDomain: "...",
-            // databaseURL: "https://...",
-            // projectId: "...",
-            // storageBucket: "...",
-            // messagingSenderId: "...",
-            // appId: "..."
+            apiKey: "",
+            authDomain: "",
+            databaseURL: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
         };
 
         let db = null;
@@ -223,7 +222,7 @@
                 { n: "Dr. Ellie", spec: "General" }
             ],
             beds: Array.from({length:20}, (_,i)=>({ id: i+1, label: `E${i+1}`, status: i<5 ? 'occupied' : 'free', patientId: i<5 ? `P-${100+i}` : null })),
-            roughBeds: Array.from({length:5}, (_,i)=>({ id: `R${i+1}`, label: `ER${i+1}`, status: i<1 ? 'occupied' : 'free', patientId: i<1 ? `T-${900+i}` : null })),
+            roughBeds: Array.from({length:5}, (_,i)=>({ id: `R${i+1}`, label: `R${i+1}`, status: i<1 ? 'occupied' : 'free', patientId: i<1 ? `T-${900+i}` : null })),
             appointments: []
         };
 
@@ -541,11 +540,10 @@
 
             // Phase 2: Connected
             setTimeout(() => {
-                // Optional: Play sound
                 try {
                     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2522/2522-preview.mp3'); 
                     audio.volume = 0.5;
-                    audio.play();
+                    audio.play().catch(e => console.log("Audio play failed (interaction required first)"));
                 } catch(e) {}
 
                 content.innerHTML = `
@@ -671,7 +669,7 @@
                 const pPhone = document.getElementById('p-phone').value;
                 const pIssue = document.getElementById('p-issue').value;
                 if(!pAge || !pPhone || !pIssue) { showToast('Missing Details', 'error'); btn.innerHTML = original; btn.disabled = false; return; }
-                const newAppt = { id: Date.now(), u: currentUser.u, n: pName, age: pAge, phone: pPhone, issue: pIssue, status: 'pending', level: null, vitals: null, disease: null, bed: null, doc: null };
+                const newAppt = { id: Date.now(), u: currentUser.u, n: pName, age: pAge, phone: pPhone, issue: pIssue, status: 'pending', level: null, vitals: null, disease: null, bed: null, doc: null, meds: [] };
                 DB.appointments.push(newAppt);
                 saveDB();
                 showToast('Request Sent Successfully', 'success');
@@ -685,17 +683,93 @@
             }, 1000);
         }
 
-        // --- 7. VIEW: ADMIN ---
+        // --- 7. VIEW: ADMIN (WITH AI DATABASE) ---
         function renderAdmin(c) {
             const pending = DB.appointments.filter(a => a.status === 'pending');
+            // Filter for patients who are past the 'pending' stage (accepted, diagnosed, admitted)
             const history = DB.appointments.filter(a => a.status !== 'pending').sort((a,b) => b.id - a.id);
-            c.innerHTML = `<div class="flex justify-between items-end mb-10"><h2 class="text-4xl font-extrabold text-slate-800">Admin Approvals</h2><span class="bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm animate-pulse-fast">${pending.length} Pending</span></div>${pending.length === 0 ? `<div class="bg-white p-16 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in"><div class="text-5xl mb-4 opacity-40">📭</div><h3 class="text-xl font-bold text-slate-800">All Clear</h3><p class="text-slate-500 mt-2">No pending requests at the moment.</p></div>` : `<div class="grid lg:grid-cols-3 gap-6">${pending.map(a => `<div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between h-full relative overflow-hidden"><div class="mb-6"><div class="flex justify-between items-start"><div class="font-bold text-xl text-slate-800">${a.n}</div><span class="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border border-yellow-200">PENDING</span></div><div class="text-sm text-slate-500 space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-100"><div class="flex items-center gap-2"><span>📞</span> ${a.phone}</div><div class="flex items-center gap-2"><span>🎂</span> ${a.age} Years Old</div><div class="mt-3 pt-3 border-t border-slate-100 border-dashed">Issue: <span class="font-bold text-slate-700 ml-2">${a.issue}</span></div></div></div><button onclick="approveReq(${a.id}, this)" class="w-full mt-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-2xl transform active:scale-95 transition-all duration-200">Approve & Assign</button></div>`).join('')}</div>`}<h3 class="text-xl font-bold text-slate-700 mb-6 border-b-2 border-slate-100 pb-2 mt-8">Processed Requests (Priority Levels)</h3><div class="grid lg:grid-cols-3 gap-6">${history.length === 0 ? '<p class="col-span-full text-slate-500">No history yet.</p>' : history.map(a => `<div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 animate-fade-in"><div class="flex justify-between items-center mb-4"><div class="font-bold text-lg text-slate-800">${a.n}</div><span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded font-bold uppercase">${a.status}</span></div><div class="space-y-2 text-sm text-slate-600"><div><span class="font-medium text-slate-800">Assigned Doc:</span> ${a.doc || '-'}</div><div><span class="font-medium text-slate-800">Diagnosis:</span> ${a.disease || '-'}</div><div class="mt-3 pt-3 border-t border-slate-100 border-dashed"><span class="font-bold text-slate-700 block mb-1">Priority Level:</span><span class="ml-2 px-3 py-1 rounded text-xs font-bold ${getLevelColor(a.level)}">${a.level || 'Diagnosing...'}</span></div></div></div>`).join('')}</div>`;
+            
+            c.innerHTML = `
+            <div class="flex justify-between items-end mb-10">
+                <h2 class="text-4xl font-extrabold text-slate-800">Admin Dashboard</h2>
+                <span class="bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm animate-pulse-fast">${pending.length} Pending</span>
+            </div>
+
+            <!-- SECTION 1: PENDING REQUESTS -->
+            ${pending.length === 0 ? `<div class="bg-white p-16 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in mb-12"><div class="text-5xl mb-4 opacity-40">📭</div><h3 class="text-xl font-bold text-slate-800">No Pending Requests</h3><p class="text-slate-500 mt-2">Inbox is clear.</p></div>` : `<div class="grid lg:grid-cols-3 gap-6 mb-12">${pending.map(a => `<div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between h-full relative overflow-hidden"><div class="mb-6"><div class="flex justify-between items-start"><div class="font-bold text-xl text-slate-800">${a.n}</div><span class="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border border-yellow-200">PENDING</span></div><div class="text-sm text-slate-500 space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-100"><div class="flex items-center gap-2"><span>📞</span> ${a.phone}</div><div class="flex items-center gap-2"><span>🎂</span> ${a.age} Years Old</div><div class="mt-3 pt-3 border-t border-slate-100 border-dashed">Issue: <span class="font-bold text-slate-700 ml-2">${a.issue}</span></div></div></div><button onclick="approveReq(${a.id}, this)" class="w-full mt-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-2xl transform active:scale-95 transition-all duration-200">Approve & Assign</button></div>`).join('')}</div>`}
+
+            <!-- SECTION 2: AI PATIENT DATABASE -->
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in">
+                <div class="p-6 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xl shadow-lg">
+                            🗄️
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-extrabold text-slate-800">AI Patient Database</h3>
+                            <p class="text-xs text-slate-500 font-medium">Secure Cloud Records & Live Sync</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-xs font-bold text-emerald-600 font-mono">LIVE SYNC ACTIVE</span>
+                    </div>
+                </div>
+
+                <!-- Database Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-100">
+                                <th class="p-4">Patient</th>
+                                <th class="p-4">Diagnosis (AI)</th>
+                                <th class="p-4">Priority</th>
+                                <th class="p-4">Medicine</th>
+                                <th class="p-4">Bed</th>
+                                <th class="p-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            ${history.length === 0 ? '<tr><td colspan="6" class="p-8 text-center text-slate-400">Database is empty. Approve patients to start the workflow.</td></tr>' : history.map(a => `
+                                <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                    <td class="p-4">
+                                        <div class="font-bold text-slate-800">${a.n}</div>
+                                        <div class="text-xs text-slate-400">Doc: ${a.doc || '-'}</div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="font-medium text-slate-700">${a.disease || '<span class="italic text-slate-400">Awaiting AI...</span>'}</div>
+                                        ${a.vitals ? `<div class="text-xs text-slate-500 mt-1">T:${a.vitals.temp}°C / HR:${a.vitals.hr}</div>` : ''}
+                                    </td>
+                                    <td class="p-4">
+                                        <span class="px-2 py-1 rounded text-xs font-bold ${getLevelColor(a.level)}">${a.level || 'Processing'}</span>
+                                    </td>
+                                    <td class="p-4">
+                                        ${a.meds && a.meds.length > 0 ? `<div class="flex flex-wrap gap-1 max-w-[150px]">${a.meds.map(m => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-100 px-1.5 py-0.5 rounded text-[10px] font-bold">${m}</span>`).join('')}</div>` : '<span class="text-slate-300 text-xs">-</span>'}
+                                    </td>
+                                    <td class="p-4">
+                                        <span class="font-mono text-sm ${a.bed ? 'text-emerald-600 font-bold' : 'text-slate-400'}">${a.bed ? 'Bed ' + a.bed : 'Waiting...'}</span>
+                                    </td>
+                                    <td class="p-4">
+                                        <span class="px-2 py-1 rounded-full text-xs font-bold uppercase border ${getStatusBadge(a.status)}">${a.status}</span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
         }
         function getLevelColor(level) {
             if(!level) return 'bg-slate-100 text-slate-400';
             if(level.includes('Critical')) return 'bg-red-100 text-red-700 border border-red-200';
             if(level.includes('Urgent')) return 'bg-yellow-100 text-yellow-700 border border-yellow-200';
             return 'bg-green-100 text-green-700 border border-green-200';
+        }
+        function getStatusBadge(status) {
+            if (status === 'accepted') return 'bg-blue-100 text-blue-700 border-blue-200';
+            if (status === 'diagnosed') return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+            if (status === 'admitted') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            return 'bg-slate-100 text-slate-400';
         }
         function approveReq(id, btn) {
             const apt = DB.appointments.find(a => a.id === id);
@@ -711,10 +785,36 @@
             }, 800);
         }
 
-        // --- 8. VIEW: DOCTOR ---
+        // --- 8. VIEW: DOCTOR (WITH MEDICINE FEATURE) ---
         function renderDoctor(c) {
             const patients = DB.appointments.filter(a => a.status === 'accepted');
-            c.innerHTML = `<h2 class="text-4xl font-extrabold text-slate-800 mb-10">AI Diagnosis Center</h2>${patients.length === 0 ? `<div class="bg-white p-16 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in"><div class="text-5xl mb-4 opacity-40">🩺</div><h3 class="text-xl font-bold text-slate-800">Waiting Room Empty</h3><p class="text-slate-500 mt-2">No assigned patients yet.</p></div>` : `<div class="grid lg:grid-cols-2 gap-8">${patients.map(a => `<div class="bg-white rounded-3xl p-8 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-300"><div class="flex justify-between items-center mb-6"><div class="font-bold text-2xl text-slate-800">${a.n}</div><div class="text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100 font-bold tracking-wide">${a.doc}</div></div><div class="text-sm text-slate-500 mb-6">Assigned Doc: ${a.doc} | Issue: ${a.issue}</div><div class="bg-slate-50 rounded-2xl p-5 mb-6 border border-slate-100"><div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Enter Patient Vitals</div><div class="flex gap-4"><div class="flex-1"><label class="text-sm font-medium text-slate-600 mb-1 ml-1">Heart Rate</label><input type="number" id="hr-${a.id}" placeholder="bpm" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white shadow-sm"></div><div class="flex-1"><label class="text-sm font-medium text-slate-600 mb-1 ml-1">Temp</label><input type="number" id="temp-${a.id}" placeholder="°C" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white shadow-sm"></div></div></div><div id="result-${a.id}" class="hidden mb-6 animate-fade-in"><div class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-5 relative overflow-hidden"><div class="absolute top-0 right-0 p-2"><svg class="w-6 h-6 text-emerald-500 animate-pulse-fast" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100-16 8 8 0 000 16zm0 14a6 6 0 110-12 6 6 0 000 12zm-1-9a1 1 0 100-2 0v5a1 1 0 001 2h2a1 1 0 001-2v-5a1 1 0 000-2z"></path></svg></div><div class="flex justify-between items-center mb-2"><div class="text-sm font-bold text-emerald-700 flex items-center gap-2">🤖 AI Analysis Result</div><div class="text-xs text-emerald-600 font-mono bg-emerald-100 px-2 py-1 rounded-lg">98% CONFIDENCE</div></div><div class="w-full bg-emerald-200 rounded-full h-2.5 overflow-hidden mb-3"><div class="bg-emerald-500 h-full rounded-full" style="width: 0%; transition: width 1.5s ease-out;"></div></div><div id="disease-${a.id}" class="font-bold text-slate-800 text-xl">Analyzing...</div></div></div><button onclick="runDiagnosis(${a.id}, this)" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-2xl transform active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"><span>Run AI Diagnosis</span><span class="text-xl">🔬</span></button></div>`).join('')}</div>`}`;
+            c.innerHTML = `<h2 class="text-4xl font-extrabold text-slate-800 mb-10">AI Diagnosis Center</h2>${patients.length === 0 ? `<div class="bg-white p-16 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in"><div class="text-5xl mb-4 opacity-40">🩺</div><h3 class="text-xl font-bold text-slate-800">Waiting Room Empty</h3><p class="text-slate-500 mt-2">No assigned patients yet.</p></div>` : `<div class="grid lg:grid-cols-2 gap-8">${patients.map(a => `<div class="bg-white rounded-3xl p-8 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-300"><div class="flex justify-between items-center mb-6"><div class="font-bold text-2xl text-slate-800">${a.n}</div><div class="text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100 font-bold tracking-wide">${a.doc}</div></div><div class="text-sm text-slate-500 mb-6">Assigned Doc: ${a.doc} | Issue: ${a.issue}</div><div class="bg-slate-50 rounded-2xl p-5 mb-6 border border-slate-100"><div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Enter Patient Vitals</div><div class="flex gap-4"><div class="flex-1"><label class="text-sm font-medium text-slate-600 mb-1 ml-1">Heart Rate</label><input type="number" id="hr-${a.id}" placeholder="bpm" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white shadow-sm"></div><div class="flex-1"><label class="text-sm font-medium text-slate-600 mb-1 ml-1">Temp</label><input type="number" id="temp-${a.id}" placeholder="°C" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white shadow-sm"></div></div></div>
+                
+                <!-- AI Diagnosis Result Area -->
+                <div id="result-${a.id}" class="hidden mb-6 animate-fade-in">
+                    <div class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-5 relative overflow-hidden mb-4">
+                        <div class="absolute top-0 right-0 p-2"><svg class="w-6 h-6 text-emerald-500 animate-pulse-fast" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100-16 8 8 0 000 16zm0 14a6 6 0 110-12 6 6 0 000 12zm-1-9a1 1 0 100-2 0v5a1 1 0 001 2h2a1 1 0 001-2v-5a1 1 0 000-2z"></path></svg></div>
+                        <div class="flex justify-between items-center mb-2"><div class="text-sm font-bold text-emerald-700 flex items-center gap-2">🤖 AI Analysis Result</div><div class="text-xs text-emerald-600 font-mono bg-emerald-100 px-2 py-1 rounded-lg">98% CONFIDENCE</div></div>
+                        <div class="w-full bg-emerald-200 rounded-full h-2.5 overflow-hidden mb-3"><div class="bg-emerald-500 h-full rounded-full" style="width: 0%; transition: width 1.5s ease-out;"></div></div>
+                        <div id="disease-${a.id}" class="font-bold text-slate-800 text-xl">Analyzing...</div>
+                    </div>
+                </div>
+
+                <!-- Medicine Area (Hidden initially) -->
+                <div id="meds-container-${a.id}" class="hidden mb-6 animate-fade-in">
+                    <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-5">
+                        <div class="flex items-center gap-2 mb-3 text-indigo-800 font-bold">
+                            <span>💊</span> <span class="uppercase text-xs tracking-wide opacity-70">Suggested Medication</span>
+                        </div>
+                        <div id="meds-list-${a.id}" class="flex flex-wrap gap-2 mb-4"></div>
+                        <button id="btn-prescribe-${a.id}" onclick="prescribeMeds(${a.id})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-200 flex items-center justify-center gap-2">
+                            <span>Prescribe & Send to Nurse</span>
+                            <span>➔</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button id="diag-btn-${a.id}" onclick="runDiagnosis(${a.id}, this)" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-2xl transform active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"><span>Run AI Diagnosis</span><span class="text-xl">🔬</span></button></div>`).join('')}</div>`}`;
         }
         function runDiagnosis(id, btn) {
             const apt = DB.appointments.find(a => a.id === id);
@@ -727,34 +827,228 @@
             setTimeout(() => {
                 let disease = "Viral Fever";
                 let level = "Stable (ESI 3)";
-                if(temp > 39 && hr > 100) { disease = "Sepsis / Critical"; level = "Critical (ESI 1)"; } else if(hr > 110) { disease = "Tachycardia"; level = "Urgent (ESI 2)"; } else if(temp > 38) { disease = "High Grade Fever"; level = "Urgent (ESI 2)"; }
-                apt.disease = disease; apt.level = level; apt.vitals = { hr, temp }; apt.status = 'diagnosed';
+                let suggestedMeds = ["Paracetamol 500mg", "ORS (Hydration)", "Bed Rest"];
+
+                // Simple Logic Tree for Demo
+                if(temp > 39 && hr > 100) { 
+                    disease = "Sepsis / Critical"; 
+                    level = "Critical (ESI 1)"; 
+                    suggestedMeds = ["IV Antibiotics", "Vasopressors", "ICU Admission"];
+                } else if(hr > 110) { 
+                    disease = "Tachycardia"; 
+                    level = "Urgent (ESI 2)"; 
+                    suggestedMeds = ["Beta Blockers", "ECG Monitoring", "Sedation"];
+                } else if(temp > 38) { 
+                    disease = "High Grade Fever"; 
+                    level = "Urgent (ESI 2)"; 
+                    suggestedMeds = ["Ibuprofen", "Cold Compress", "Fluid Intake"];
+                } else {
+                    // Fracture logic (simulated via low temp/high hr assumption or random for demo)
+                    if(Math.random() > 0.7) {
+                        disease = "Bone Fracture";
+                        level = "Urgent (ESI 2)";
+                        suggestedMeds = ["Analgesics", "Calcium Supplements", "Immobilization"];
+                    }
+                }
+
+                // Update Data
+                apt.disease = disease; 
+                apt.level = level; 
+                apt.vitals = { hr, temp }; 
+                apt.meds = suggestedMeds; // Save meds
+                apt.status = 'diagnosed'; // Status remains diagnosed, but marked as ready for nurse
+
+                // Show Result
                 resBox.classList.remove('hidden');
                 setTimeout(() => { resBox.querySelector('.bg-emerald-500').style.width = '98%'; document.getElementById(`disease-${id}`).innerText = disease; }, 100);
+                
+                // Show Medicine Section
+                const medsContainer = document.getElementById(`meds-container-${id}`);
+                const medsList = document.getElementById(`meds-list-${id}`);
+                medsContainer.classList.remove('hidden');
+                medsList.innerHTML = suggestedMeds.map(m => `<span class="bg-white px-3 py-1.5 rounded-full text-xs font-bold text-indigo-700 border border-indigo-200 shadow-sm flex items-center gap-1"><span>💊</span> ${m}</span>`).join('');
+
                 showToast(`Diagnosed: ${disease}`, 'success');
-                setTimeout(() => renderDoctor(document.getElementById('main-content')), 2000);
+                
+                // Hide Diagnosis Button to force using the Prescription button
+                btn.classList.add('hidden');
             }, 1500);
         }
 
-        // --- 9. VIEW: NURSE ---
+        // UPDATED: Send Prescription to Nurse
+        function prescribeMeds(id) {
+            const apt = DB.appointments.find(a => a.id === id);
+            const btn = document.getElementById(`btn-prescribe-${id}`);
+            
+            // UI Feedback for Doctor
+            btn.disabled = true;
+            btn.innerHTML = `<span>Sent to Nurse ✅</span>`;
+            btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-md', 'hover:shadow-lg');
+            btn.classList.add('bg-emerald-500', 'cursor-default', 'shadow-sm');
+            
+            // Logic: Save DB
+            // Meds are already in apt.meds, we just need to ensure DB is saved
+            saveDB();
+            
+            showToast('Prescription sent to Nurse Portal', 'success');
+        }
+
+        // --- 9. VIEW: NURSE (VISUAL BED AVAILABILITY + MEDS DISPLAY) ---
         function renderNurse(c) {
             const patients = DB.appointments.filter(a => a.status === 'diagnosed');
             const bestBed = DB.beds.find(b => b.status === 'free');
             const bestRoughBed = DB.roughBeds.find(b => b.status === 'free');
-            c.innerHTML = `<h2 class="text-4xl font-extrabold text-slate-800 mb-8">Smart Bed Management</h2><div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 mb-10 shadow-xl text-white relative overflow-hidden"><div class="absolute -right-6 -bottom-6 text-9xl opacity-10">🛏️</div><div class="flex items-center gap-4 relative z-10"><div class="bg-white/20 p-3 rounded-2xl backdrop-blur-sm"><svg class="w-10 h-10 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div><div><div class="font-bold text-xl">AI Hospital Bed Optimizer</div><div class="text-blue-100 text-sm">Scanning Main Ward & Emergency Triage for optimal placement...</div></div></div></div>${patients.length === 0 ? `<div class="bg-white p-16 rounded-3xl text-center shadow-xl border border-slate-100"><div class="text-5xl mb-4 opacity-40">🏥</div><h3 class="text-xl font-bold text-slate-800">No Patients Waiting</h3><p class="text-slate-500 mt-2">All diagnosed patients have been admitted.</p></div>` : `<div class="grid lg:grid-cols-12 gap-8 items-start"><div class="lg:col-span-4 space-y-6">${patients.map(a => `<div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 animate-fade-in"><div class="flex justify-between items-center mb-4"><div class="font-bold text-lg text-slate-800">${a.n}</div><div class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full border border-indigo-100 font-bold">DIAGNOSED</div></div><div class="text-sm text-slate-500 space-y-2 mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-100"><div>Diagnosis: <span class="font-bold text-red-600">${a.disease}</span></div><div class="flex gap-4"><span>HR: <span class="font-medium">${a.vitals.hr}</span></span> • <span>Temp: <span class="font-medium">${a.vitals.temp}°C</span></span></div><div>Phone: ${a.phone}</div></div><div id="bed-res-${a.id}" class="hidden bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4 text-sm text-blue-800 flex items-center gap-2"><span class="animate-pulse">🔍</span><span id="bed-txt-${a.id}">Scanning Hospital DB...</span></div><button onclick="assignBed(${a.id}, this)" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-200">Allocate AI Suggested Bed</button></div>`).join('')}</div><div class="lg:col-span-8 space-y-6"><div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100"><div class="flex items-center justify-between mb-4 pb-2 border-b-2 border-slate-100"><h3 class="font-bold text-lg text-slate-700">Main Ward (Standard)</h3><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-xs font-bold text-slate-500">Available: ${DB.beds.filter(b=>b.status==='free').length}</span></div></div><div class="grid grid-cols-[repeat(auto-fill,minmax(70px,1fr))] gap-3">${DB.beds.map(b => generateBedHTML(b, bestBed, false)).join('')}</div></div><div class="bg-white rounded-3xl p-6 shadow-xl border-l-4 border-red-500 relative"><div class="absolute -top-3 left-6 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-red-200">Emergency / Rough</div><div class="flex items-center justify-between mt-2 mb-4 pb-2 border-b-2 border-red-50"><h3 class="font-bold text-lg text-slate-700">Triage Area</h3><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-400"></span><span class="text-xs font-bold text-slate-500">Available: ${DB.roughBeds.filter(b=>b.status==='free').length}</span></div></div><div class="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-3">${DB.roughBeds.map(b => generateBedHTML(b, (bestBed ? null : bestRoughBed), true)).join('')}</div></div></div></div>`}`;
+
+            // Stats for Dashboard
+            const mainFree = DB.beds.filter(b => b.status === 'free').length;
+            const emgFree = DB.roughBeds.filter(b => b.status === 'free').length;
+
+            c.innerHTML = `
+            <h2 class="text-4xl font-extrabold text-slate-800 mb-8">Smart Bed Management</h2>
+            
+            <!-- Availability Dashboard -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-fade-in">
+                <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 flex items-center justify-between">
+                    <div><div class="text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Main Ward</div><div class="text-3xl font-extrabold text-indigo-600">${mainFree} <span class="text-slate-300 text-lg font-normal">Free</span></div></div>
+                    <div class="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-2xl">🏥</div>
+                </div>
+                <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 flex items-center justify-between">
+                    <div><div class="text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Emergency</div><div class="text-3xl font-extrabold text-red-600">${emgFree} <span class="text-slate-300 text-lg font-normal">Free</span></div></div>
+                    <div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-2xl">🚑</div>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-12 gap-8 items-start">
+                <!-- LEFT COLUMN: ACTIONS -->
+                <div class="lg:col-span-4 space-y-6">
+                    <div class="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-6 shadow-xl text-white relative overflow-hidden">
+                        <div class="absolute -right-6 -bottom-6 text-9xl opacity-10">🤖</div>
+                        <div class="relative z-10">
+                            <div class="font-bold text-xl mb-2">AI Bed Allocation</div>
+                            <p class="text-blue-100 text-sm mb-4">Optimizing placement based on severity and availability.</p>
+                        </div>
+                    </div>
+
+                    ${patients.length === 0 ? `<div class="bg-white p-8 rounded-3xl text-center shadow-xl border border-slate-100"><div class="text-4xl mb-2 opacity-40">✅</div><h3 class="font-bold text-slate-800">No Patients Waiting</h3><p class="text-sm text-slate-500 mt-1">Queue is empty.</p></div>` : patients.map(a => `
+                        <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 animate-fade-in">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="font-bold text-lg text-slate-800">${a.n}</div>
+                                <div class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full border border-indigo-100 font-bold">DIAGNOSED</div>
+                            </div>
+                            <div class="text-sm text-slate-500 space-y-2 mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                <div>Diagnosis: <span class="font-bold text-red-600">${a.disease}</span></div>
+                                <div class="flex gap-4"><span>HR: <span class="font-medium">${a.vitals.hr}</span></span> • <span>Temp: <span class="font-medium">${a.vitals.temp}°C</span></span></div>
+                                
+                                <!-- MEDICINE DISPLAY SECTION -->
+                                ${a.meds && a.meds.length > 0 ? `
+                                <div class="mt-3 pt-3 border-t-2 border-dashed border-slate-200">
+                                    <div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase mb-2">
+                                        <span class="animate-pulse">💊</span> Prescribed
+                                    </div>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        ${a.meds.map(m => `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-1 rounded-md text-xs font-semibold shadow-sm">${m}</span>`).join('')}
+                                    </div>
+                                </div>` : ''}
+
+                            </div>
+                            <div id="bed-res-${a.id}" class="hidden bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4 text-sm text-blue-800 flex items-center gap-2">
+                                <span class="animate-pulse">🔍</span><span id="bed-txt-${a.id}">Scanning Hospital DB...</span>
+                            </div>
+                            <button onclick="assignBed(${a.id}, this)" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-200">
+                                Allocate AI Suggested Bed
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- RIGHT COLUMN: VISUAL BED GRIDS -->
+                <div class="lg:col-span-8 space-y-8">
+                    
+                    <!-- Emergency / Rough Beds -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-lg text-slate-700 flex items-center gap-2">
+                                <span class="bg-red-100 text-red-600 p-1.5 rounded-lg text-sm">R1-R5</span>
+                                Emergency Triage
+                            </h3>
+                            <div class="flex items-center gap-2 text-xs text-slate-400">
+                                <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-red-500"></div> Free</span>
+                                <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-slate-300"></div> Occupied</span>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100">
+                            <div class="grid grid-cols-5 gap-4">
+                                ${DB.roughBeds.map(b => generateBedHTML(b, bestBed, true)).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- General Ward Beds -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-lg text-slate-700 flex items-center gap-2">
+                                <span class="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg text-sm">E1-E20</span>
+                                Main Ward (General)
+                            </h3>
+                            <div class="flex items-center gap-2 text-xs text-slate-400">
+                                <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-emerald-500"></div> Free</span>
+                                <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-slate-300"></div> Occupied</span>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100">
+                            <div class="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">
+                                ${DB.beds.map(b => generateBedHTML(b, bestBed, false)).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>`;
         }
+
         function generateBedHTML(b, suggestedBed, isRough) {
             const isFree = b.status === 'free';
             const isSuggested = suggestedBed && b.id === suggestedBed.id;
-            let occupantText = "Free";
-            let occupantClass = "text-slate-400";
-            if(!isFree) { const p = DB.appointments.find(pat => pat.bed === b.id); if(p) { occupantText = p.n.split(' ')[0]; occupantClass = "font-bold"; } else { occupantText = "Maint."; } }
-            let baseClasses = "rounded-xl p-3 flex flex-col items-center justify-center border-2 transition-all duration-300 relative h-24 select-none ";
-            let statusColor = isRough ? (isFree ? "text-red-600 border-red-100 bg-red-50" : "text-slate-400 bg-slate-100") : (isFree ? "text-emerald-600 border-emerald-100 bg-emerald-50" : "text-slate-400 bg-slate-100");
-            let highlightClass = isSuggested ? (isRough ? "ai-bed-highlight-rough border-red-500 bg-red-100 scale-105 shadow-lg" : "ai-bed-highlight border-indigo-500 bg-indigo-100 scale-105 shadow-lg") : "";
-            let occupiedClass = !isFree ? "opacity-60 cursor-not-allowed grayscale-[0.5]" : "hover:-translate-y-1 cursor-pointer hover:shadow-md";
-            let finalClasses = baseClasses + statusColor + " " + highlightClass + " " + occupiedClass;
-            return `<div class="${finalClasses}"><div class="text-lg font-bold mb-1">${b.label}</div><div class="w-10 h-[2px] bg-current/20 rounded-full mb-2"></div><div class="text-[10px] uppercase tracking-wider font-bold mb-1">${b.status}</div><div class="text-[11px] font-medium leading-tight ${occupantClass} text-center truncate w-full">${occupantText}</div>${isSuggested ? `<div class="absolute -top-2 -right-2 ${isRough?'bg-red-600':'bg-indigo-600'} text-white text-[10px] px-1.5 py-0.5 rounded-full shadow-md animate-bounce border border-white">AI</div>` : ''}</div>`;
+            
+            // Visual Styling for "Small Bed Card"
+            let baseClasses = "relative w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all duration-300 hover:-translate-y-1 select-none ";
+            
+            // Colors based on Section (Emergency vs General) and Status
+            if (isRough) {
+                // Emergency Beds
+                if (isFree) {
+                    baseClasses += "bg-red-50 border-red-200 text-red-600 shadow-sm hover:shadow-md hover:border-red-400";
+                } else {
+                    baseClasses += "bg-slate-50 border-slate-100 text-slate-300 opacity-60 cursor-not-allowed";
+                }
+            } else {
+                // General Beds
+                if (isFree) {
+                    baseClasses += "bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm hover:shadow-md hover:border-emerald-400";
+                } else {
+                    baseClasses += "bg-slate-50 border-slate-100 text-slate-300 opacity-60 cursor-not-allowed";
+                }
+            }
+
+            // Suggestion Highlight
+            if (isSuggested) {
+                baseClasses += isRough ? " ai-bed-highlight-rough bg-red-100 border-red-500" : " ai-bed-highlight bg-indigo-100 border-indigo-500";
+            }
+
+            return `
+                <div class="${baseClasses}">
+                    <!-- Bed Icon -->
+                    <div class="text-2xl mb-1 transition-transform duration-300 ${isFree ? 'scale-100' : 'scale-90 grayscale'}">🛏️</div>
+                    
+                    <!-- Label -->
+                    <div class="text-xs font-bold font-mono tracking-wide">${b.label}</div>
+                    
+                    <!-- Status Indicator (Dot) -->
+                    <div class="absolute top-2 right-2 w-2 h-2 rounded-full ${isFree ? (isRough ? 'bg-red-500' : 'bg-emerald-500') : 'bg-slate-300'}"></div>
+
+                    ${isSuggested ? `<div class="absolute -top-2 -right-2 ${isRough?'bg-red-600':'bg-indigo-600'} text-white text-[10px] px-1.5 py-0.5 rounded-full shadow-md animate-bounce border border-white font-bold">AI</div>` : ''}
+                </div>
+            `;
         }
         function assignBed(id, btn) {
             const apt = DB.appointments.find(a => a.id === id);
