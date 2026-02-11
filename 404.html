@@ -2,10 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MedLink AI - Patient Portal</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FIREBASE SDKS -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -30,17 +28,21 @@
         }
     </script>
     <style>
-        body { margin: 0; overflow: hidden; }
+        body { margin: 0; overflow-x: hidden; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .typing-cursor::after { content: '|'; animation: blink 1s step-start infinite; }
         @keyframes blink { 50% { opacity: 0; } }
+        
+        /* Bed Highlights */
         .ai-bed-highlight { animation: highlightPulse 2s infinite; border-color: #4f46e5; box-shadow: 0 0 15px rgba(79, 70, 229, 0.4); transform: scale(1.05); z-index: 10; }
         .ai-bed-highlight-rough { animation: highlightPulseRough 2s infinite; border-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); transform: scale(1.05); z-index: 10; }
         @keyframes highlightPulse { 0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); } 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); } }
         @keyframes highlightPulseRough { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        
         #chat-window { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        #chat-toggle-btn { transition: all 0.3s ease; }
+        
+        /* Emergency Stripe Animation */
         .ambulance-alert-bg {
             background: repeating-linear-gradient(45deg, #fee2e2, #fee2e2 10px, #fecaca 10px, #fecaca 20px);
             animation: moveStripes 1s linear infinite;
@@ -49,13 +51,17 @@
             0% { background-position: 0 0; }
             100% { background-position: 28px 0; }
         }
-        /* Emergency Pulse for Overlay */
+        
+        /* Red Pulse */
         @keyframes pulse-red {
             0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
             70% { box-shadow: 0 0 0 30px rgba(220, 38, 38, 0); }
             100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
         }
         .pulse-red { animation: pulse-red 2s infinite; }
+
+        /* Mobile Sidebar Transition */
+        .sidebar-transition { transition: transform 0.3s ease-in-out; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen w-screen overflow-hidden">
@@ -67,11 +73,11 @@
     </div>
 
     <!-- ================= AUTH SCREEN ================= -->
-    <div id="auth-container" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-        <div class="bg-white/90 backdrop-blur-md p-8 rounded-3xl shadow-2xl w-full max-w-md animate-fade-in border border-white/50">
+    <div id="auth-container" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
+        <div class="bg-white/90 backdrop-blur-md p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-fade-in border border-white/50">
             <div class="text-center mb-8">
-                <div class="text-6xl mb-4 animate-pulse-fast">🏥</div>
-                <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">MedLink AI</h1>
+                <div class="text-5xl md:text-6xl mb-4 animate-pulse-fast">🏥</div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">MedLink AI</h1>
                 <p class="text-slate-500 mt-2 text-sm">Live Cloud Connected</p>
             </div>
             <div class="flex bg-slate-200/50 p-1 rounded-xl mb-8 relative">
@@ -80,27 +86,27 @@
                 <button id="tab-signup" onclick="setAuthMode('signup')" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 relative z-10 text-slate-500">Sign Up</button>
             </div>
             <form onsubmit="handleAuth(event)" class="space-y-5">
-                <div id="role-select" class="hidden grid grid-cols-2 gap-4 mb-4">
-                    <button type="button" onclick="selectRole('patient', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 hover:shadow-lg bg-white">
-                        <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👤</div>
-                        <div class="text-left"><div class="font-bold text-slate-700 text-sm">Patient</div><div class="text-xs text-slate-400">Book Appointment</div></div>
+                <div id="role-select" class="hidden grid grid-cols-2 gap-3 mb-4">
+                    <button type="button" onclick="selectRole('patient', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-3 flex flex-col items-center gap-2 transition-all duration-300 hover:shadow-lg bg-white">
+                        <div class="text-xl">👤</div>
+                        <div class="font-bold text-slate-700 text-xs">Patient</div>
                     </button>
-                    <button type="button" onclick="selectRole('admin', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 hover:shadow-lg bg-white">
-                        <div class="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">⚖️</div>
-                        <div class="text-left"><div class="font-bold text-slate-700 text-sm">Admin</div><div class="text-xs text-slate-400">Approve Requests</div></div>
+                    <button type="button" onclick="selectRole('admin', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-3 flex flex-col items-center gap-2 transition-all duration-300 hover:shadow-lg bg-white">
+                        <div class="text-xl">⚖️</div>
+                        <div class="font-bold text-slate-700 text-xs">Admin</div>
                     </button>
-                    <button type="button" onclick="selectRole('doctor', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 hover:shadow-lg bg-white">
-                        <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🩺</div>
-                        <div class="text-left"><div class="font-bold text-slate-700 text-sm">Doctor</div><div class="text-xs text-slate-400">AI Diagnose</div></div>
+                    <button type="button" onclick="selectRole('doctor', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-3 flex flex-col items-center gap-2 transition-all duration-300 hover:shadow-lg bg-white">
+                        <div class="text-xl">🩺</div>
+                        <div class="font-bold text-slate-700 text-xs">Doctor</div>
                     </button>
-                    <button type="button" onclick="selectRole('nurse', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 hover:shadow-lg bg-white">
-                        <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🏥</div>
-                        <div class="text-left"><div class="font-bold text-slate-700 text-sm">Nurse</div><div class="text-xs text-slate-400">Manage Beds</div></div>
+                    <button type="button" onclick="selectRole('nurse', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-3 flex flex-col items-center gap-2 transition-all duration-300 hover:shadow-lg bg-white">
+                        <div class="text-xl">🏥</div>
+                        <div class="font-bold text-slate-700 text-xs">Nurse</div>
                     </button>
                 </div>
                 <div class="space-y-2">
-                    <input type="text" id="username" placeholder="Username" required class="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white/50">
-                    <input type="password" id="password" placeholder="Password" required class="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white/50">
+                    <input type="text" id="username" placeholder="Username" required class="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white/50 text-base">
+                    <input type="password" id="password" placeholder="Password" required class="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white/50 text-base">
                 </div>
                 <button type="submit" id="auth-btn" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2">
                     <span id="auth-btn-text">Login</span>
@@ -113,29 +119,59 @@
     </div>
 
     <!-- ================= MAIN APP ================= -->
-    <div id="app-container" class="hidden flex h-full w-full">
-        <aside class="w-72 bg-white border-r border-slate-100 flex flex-col shadow-xl z-10">
-            <div class="p-8 flex items-center gap-4 border-b border-slate-50">
+    <div id="app-container" class="hidden flex h-full w-full relative">
+        
+        <!-- MOBILE HEADER (Visible only on small screens) -->
+        <div class="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40 flex items-center justify-between px-4 shadow-sm">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🩺</span>
+                <span class="font-bold text-lg text-slate-800">MedLink AI</span>
+            </div>
+            <button onclick="toggleSidebar()" class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+        </div>
+
+        <!-- SIDEBAR (Fixed on Desktop, Off-canvas on Mobile) -->
+        <!-- On Mobile: Transform -translate-x-full (hidden). When open: translate-x-0. -->
+        <!-- On Desktop: Always visible relative. -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-100 flex flex-col shadow-xl transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 sidebar-transition">
+            <!-- Mobile Close Button -->
+            <div class="md:hidden flex justify-end p-4 border-b border-slate-100">
+                <button onclick="toggleSidebar()" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="p-8 hidden md:flex items-center gap-4 border-b border-slate-50">
                 <div class="text-3xl">🩺</div>
                 <div class="font-bold text-2xl text-slate-800 tracking-tight">MedLink AI</div>
             </div>
-            <nav id="nav-menu" class="flex-1 p-6 space-y-3"></nav>
-            <div class="p-6 border-t border-slate-100">
+            
+            <nav id="nav-menu" class="flex-1 p-6 space-y-3 overflow-y-auto"></nav>
+            
+            <div class="p-6 border-t border-slate-100 bg-slate-50/50">
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
-                    <div id="user-name" class="font-bold text-slate-800 text-lg">User</div>
+                    <div id="user-name" class="font-bold text-slate-800 text-lg truncate">User</div>
                     <div id="user-role" class="text-xs text-indigo-500 font-semibold uppercase tracking-widest mt-0.5">Role</div>
                 </div>
                 <button onclick="logout()" class="w-full mt-6 py-3 text-sm text-red-500 font-bold bg-red-50 hover:bg-red-100 rounded-xl transition-colors"> Logout </button>
             </div>
         </aside>
-        <main class="flex-1 bg-slate-50/80 h-full overflow-y-auto hide-scrollbar relative">
-            <div id="main-content" class="p-8 max-w-8xl mx-auto min-h-full"></div>
+
+        <!-- OVERLAY for Mobile Sidebar -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 bg-slate-50/80 h-full overflow-y-auto hide-scrollbar relative pt-16 md:pt-0">
+            <div id="main-content" class="p-4 md:p-8 max-w-8xl mx-auto min-h-full pb-24 md:pb-8"></div>
         </main>
     </div>
 
     <!-- ================= CHATBOT ================= -->
-    <div class="fixed bottom-8 right-8 z-40 flex flex-col items-end">
-        <div id="chat-window" class="hidden absolute bottom-24 right-0 w-96 h-[600px] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col scale-95 opacity-0 origin-bottom-right mb-4">
+    <div class="fixed bottom-4 md:bottom-8 right-4 md:right-8 z-40 flex flex-col items-end pointer-events-none">
+        <!-- Chat Window -->
+        <div id="chat-window" class="hidden pointer-events-auto absolute bottom-20 md:bottom-24 right-0 w-[90vw] md:w-96 h-[70vh] md:h-[600px] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col scale-95 opacity-0 origin-bottom-right mb-4">
             <div class="bg-indigo-600 p-4 flex justify-between items-center text-white rounded-t-3xl cursor-pointer shadow-md">
                 <div class="font-bold flex items-center gap-2">🤖 MedTriage Bot <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">AI</span></div>
                 <button onclick="toggleChat()" class="hover:bg-indigo-700 p-1.5 rounded-full transition-colors text-xl leading-none">&times;</button>
@@ -143,18 +179,20 @@
             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-slate-50 space-y-3 scroll-smooth">
                 <div class="mr-auto bg-white text-slate-800 rounded-2xl rounded-bl-none p-4 text-sm shadow-sm border border-slate-100 max-w-[90%] animate-slide-up">
                     <p class="font-bold text-indigo-600 mb-1">Hello! I am MedTriage.</p>
-                    <p>I can help assess symptoms or guide you to the right department. <br><span class="text-xs text-slate-400 mt-1 block italic">Disclaimer: I am an AI, not a doctor. Call emergency services for critical issues.</span></p>
+                    <p class="text-sm">I can help assess symptoms or guide you to the right department. <br><span class="text-xs text-slate-400 mt-1 block italic">Disclaimer: I am an AI, not a doctor.</span></p>
                 </div>
             </div>
             <div class="p-4 border-t border-slate-100 bg-white flex gap-3">
-                <input type="text" id="chat-input" placeholder="Describe your symptoms (e.g. severe headache)..." onkeypress="if(event.key==='Enter')sendChat()" class="flex-1 bg-slate-50 border-none rounded-full px-5 py-3 text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition-all shadow-inner">
+                <input type="text" id="chat-input" placeholder="Describe symptoms..." onkeypress="if(event.key==='Enter')sendChat()" class="flex-1 bg-slate-50 border-none rounded-full px-5 py-3 text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition-all shadow-inner">
                 <button onclick="sendChat()" class="bg-indigo-600 hover:bg-indigo-700 text-white w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-md hover:shadow-xl shrink-0">➤</button>
             </div>
         </div>
-        <button id="chat-toggle-btn" onclick="toggleChat()" class="w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center text-3xl animate-pulse-fast border-4 border-indigo-200 ring-2 ring-indigo-200">💬</button>
+
+        <!-- Chat Toggle Button -->
+        <button id="chat-toggle-btn" onclick="toggleChat()" class="pointer-events-auto w-14 h-14 md:w-16 md:h-16 bg-indigo-600 text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center text-2xl md:text-3xl animate-pulse-fast border-4 border-indigo-200 ring-2 ring-indigo-200">💬</button>
     </div>
 
-    <div id="toast-area" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-area" class="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4 items-center"></div>
 
     <script>
         // --- 1. FIREBASE CONFIGURATION ---
@@ -236,7 +274,6 @@
         let authMode = 'login';
         let selectedRole = 'patient';
 
-        // Hospital Data
         const HOSPITALS = [
             { name: "City General Hospital", loc: "Downtown District", dist: "1.2 km", rating: 4.8, icon: "🏙️" },
             { name: "St. Mary's Medical Center", loc: "Westside", dist: "4.5 km", rating: 4.5, icon: "⛪" },
@@ -333,7 +370,25 @@
         }
         function logout() { location.reload(); }
 
-        // --- 5. NAVIGATION ---
+        // --- RESPONSIVE NAVIGATION ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            
+            if (isClosed) {
+                // Open
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            } else {
+                // Close
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
+
         function initMenu() {
             const menu = document.getElementById('nav-menu');
             menu.innerHTML = '';
@@ -350,7 +405,11 @@
                     item.id = 'nav-' + r.id;
                     item.className = 'flex items-center gap-3 px-5 py-3 text-sm font-medium text-slate-600 rounded-xl transition-all duration-300 hover:bg-indigo-50 hover:text-indigo-600 group';
                     item.innerHTML = `<span class="text-2xl group-hover:scale-110 transition-transform">${r.icon}</span> <span class="font-semibold">${r.label}</span>`;
-                    item.onclick = (e) => { e.preventDefault(); navigate(r.id); };
+                    item.onclick = (e) => { 
+                        e.preventDefault(); 
+                        navigate(r.id); 
+                        if(window.innerWidth < 768) toggleSidebar(); // Close sidebar on mobile click
+                    };
                     menu.appendChild(item);
                 }
             });
@@ -373,8 +432,8 @@
         function renderPatient(c) {
             c.innerHTML = `
             <div class="mb-6">
-                <h2 class="text-4xl font-extrabold text-slate-800 tracking-tight">Welcome Back, <span class="text-indigo-600">${currentUser.n}</span></h2>
-                <p class="text-slate-500">Manage your health, book appointments, or perform a quick self-check.</p>
+                <h2 class="text-2xl md:text-4xl font-extrabold text-slate-800 tracking-tight">Welcome Back, <span class="text-indigo-600">${currentUser.n}</span></h2>
+                <p class="text-slate-500 text-sm md:text-base">Manage your health, book appointments, or perform a quick self-check.</p>
             </div>
 
             <!-- Quick Emergency Banner -->
@@ -387,7 +446,7 @@
                         </div>
                         <div>
                             <div class="font-bold text-lg leading-tight">Emergency Ambulance</div>
-                            <div class="text-xs text-red-100 font-mono tracking-widest">SMART AI TRIGGERS: AUTO-CALL IF CRITICAL</div>
+                            <div class="text-xs text-red-100 font-mono tracking-widest hidden sm:block">SMART AI TRIGGERS: AUTO-CALL IF CRITICAL</div>
                         </div>
                     </div>
                     <div class="bg-white/20 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2">
@@ -398,49 +457,48 @@
             </div>
 
             <!-- ROW 1: APPOINTMENT & SELF CHECK -->
-            <div class="grid lg:grid-cols-2 gap-8 mb-10">
+            <div class="grid lg:grid-cols-2 gap-6 md:gap-8 mb-10">
                 
                 <!-- Booking Form -->
-                <div class="bg-white rounded-3xl p-8 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-500">
-                    <div class="flex items-center gap-3 mb-8">
-                        <div class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide shadow-lg">AI POWERED</div>
-                        <h3 class="font-bold text-xl text-slate-800">Book Appointment</h3>
+                <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-500">
+                    <div class="flex items-center gap-3 mb-6 md:mb-8">
+                        <div class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-lg">AI POWERED</div>
+                        <h3 class="font-bold text-lg md:text-xl text-slate-800">Book Appointment</h3>
                     </div>
-                    <form onsubmit="bookAppt(event)" class="space-y-5">
-                        <div><label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Full Name</label><input type="text" id="p-name" value="${currentUser.n}" readonly class="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-none text-slate-400 font-medium text-sm shadow-inner"></div>
+                    <form onsubmit="bookAppt(event)" class="space-y-4 md:space-y-5">
+                        <div><label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Full Name</label><input type="text" id="p-name" value="${currentUser.n}" readonly class="w-full px-4 md:px-5 py-3.5 rounded-2xl bg-slate-50 border-none text-slate-400 font-medium text-sm shadow-inner"></div>
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Age</label><input type="number" id="p-age" required class="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all duration-300"></div>
-                            <div><label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Phone</label><input type="text" id="p-phone" required class="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all duration-300"></div>
+                            <div><label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Age</label><input type="number" id="p-age" required class="w-full px-4 md:px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all duration-300"></div>
+                            <div><label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Phone</label><input type="text" id="p-phone" required class="w-full px-4 md:px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all duration-300"></div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Primary Issue</label>
-                            <select id="p-issue" onchange="analyzeSymptom(this.value)" class="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all duration-300 bg-white cursor-pointer">
+                            <select id="p-issue" onchange="analyzeSymptom(this.value)" class="w-full px-4 md:px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all duration-300 bg-white cursor-pointer">
                                 <option value="">Select Symptoms...</option>
                                 <option value="Fever">High Fever (>38°C)</option>
                                 <option value="Chest">Chest Pain</option>
                                 <option value="Fracture">Bone Fracture</option>
                             </select>
                         </div>
-                        <div id="ai-hint" class="hidden bg-indigo-50/80 border-l-4 border-indigo-500 rounded-r-2xl p-5 text-sm text-slate-700 mt-4 animate-fade-in relative overflow-hidden">
-                            <div class="absolute top-0 right-0 p-2 opacity-20"><svg class="w-6 h-6 text-indigo-500 animate-pulse-fast" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100-16 8 8 0 000 16zm0 14a6 6 0 110-12 6 6 0 000 12zm-1-9a1 1 0 100-2 0v5a1 1 0 001 2h2a1 1 0 001-2v-5a1 1 0 000-2z"></path></svg></div>
+                        <div id="ai-hint" class="hidden bg-indigo-50/80 border-l-4 border-indigo-500 rounded-r-2xl p-4 md:p-5 text-sm text-slate-700 mt-4 animate-fade-in relative overflow-hidden">
                             <div class="font-bold text-indigo-600 mb-2 flex items-center gap-2">🤖 AI Analysis Result:</div>
                             <div id="typing-text" class="typing-cursor font-mono text-slate-600 leading-relaxed"></div>
                         </div>
                         <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 rounded-2xl shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3">
-                            <span>Send Request to Admin</span><span class="text-2xl">📅</span>
+                            <span>Send Request</span><span class="text-xl md:text-2xl">📅</span>
                         </button>
                     </form>
                 </div>
 
                 <!-- Self Health Check -->
-                <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 shadow-xl text-white relative overflow-hidden flex flex-col justify-between">
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 md:p-8 shadow-xl text-white relative overflow-hidden flex flex-col justify-between">
                     <div class="absolute -right-6 -bottom-6 text-9xl opacity-10 text-indigo-500">💓</div>
                     <div>
                         <div class="flex items-center gap-3 mb-6">
                             <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-lg">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0"></path></svg>
                             </div>
-                            <h3 class="font-bold text-2xl">AI Self-Check</h3>
+                            <h3 class="font-bold text-xl md:text-2xl">AI Self-Check</h3>
                         </div>
                         <p class="text-slate-400 text-sm mb-6">Enter your current vitals for an instant AI health assessment.</p>
                         
@@ -451,7 +509,7 @@
                                     <input type="number" id="sc-temp" step="0.1" placeholder="36.5" class="w-full bg-slate-700/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder-slate-500">
                                 </div>
                                 <div>
-                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Heart Rate (bpm)</label>
+                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Heart Rate</label>
                                     <input type="number" id="sc-hr" placeholder="72" class="w-full bg-slate-700/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder-slate-500">
                                 </div>
                             </div>
@@ -471,7 +529,6 @@
                             <span>🤖</span>
                         </button>
                         
-                        <!-- Result Container -->
                         <div id="self-check-result" class="hidden mt-4 animate-fade-in">
                             <div class="h-px w-full bg-slate-600 my-4"></div>
                             <div id="sc-content" class="bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-sm">
@@ -484,8 +541,8 @@
             </div>
 
             <!-- Specialists -->
-            <div class="bg-white rounded-3xl p-8 shadow-xl border border-slate-100 mb-10">
-                <h3 class="font-bold text-xl text-slate-800 mb-6">Our Specialists</h3>
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-100 mb-10">
+                <h3 class="font-bold text-lg md:text-xl text-slate-800 mb-6">Our Specialists</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     ${DB.doctors.map(d => `<div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 transition-colors group border border-transparent hover:border-indigo-100"><div class="w-14 h-14 bg-white rounded-full flex items-center justify-center text-3xl shadow-md group-hover:scale-110 transition-transform duration-300">👨‍⚕️</div><div><div class="font-bold text-slate-900 text-lg">${d.n}</div><div class="text-sm text-slate-500 font-medium">${d.spec} Expert</div><div class="flex items-center gap-1 mt-1"><span class="text-xs text-yellow-500 bg-yellow-50 px-2 py-0.5 rounded-full">★</span><span class="text-xs text-indigo-500">AI Recommended</span></div></div></div>`).join('')}
                 </div>
@@ -493,7 +550,7 @@
 
             <!-- Hospital Network -->
             <div class="animate-fade-in">
-                <h3 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <h3 class="text-xl md:text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                     <span class="text-3xl">🏥</span> Our Hospital Network
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -535,11 +592,11 @@
             // Phase 1: Dialing
             content.innerHTML = `
                 <div class="animate-bounce">
-                    <div class="text-8xl mb-6">🚨</div>
-                    <h2 class="text-5xl font-bold text-white mb-2">CRITICAL CONDITION DETECTED</h2>
-                    <div class="text-2xl text-red-100 font-mono mb-8">AUTO-DIALING AMBULANCE...</div>
-                    <div class="text-4xl font-bold text-white bg-red-500/50 inline-block px-6 py-2 rounded-lg">108 / 911</div>
-                    <div class="text-sm text-red-200 mt-4">Please stay calm and keep this screen active.</div>
+                    <div class="text-6xl md:text-8xl mb-6">🚨</div>
+                    <h2 class="text-3xl md:text-5xl font-bold text-white mb-2">CRITICAL CONDITION</h2>
+                    <div class="text-lg md:text-2xl text-red-100 font-mono mb-8">AUTO-DIALING AMBULANCE...</div>
+                    <div class="text-2xl md:text-4xl font-bold text-white bg-red-500/50 inline-block px-6 py-2 rounded-lg">108 / 911</div>
+                    <div class="text-sm md:text-base text-red-200 mt-4">Please stay calm.</div>
                 </div>
             `;
 
@@ -548,17 +605,17 @@
                 try {
                     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2522/2522-preview.mp3'); 
                     audio.volume = 0.5;
-                    audio.play().catch(e => console.log("Audio play failed (interaction required first)"));
+                    audio.play().catch(e => console.log("Audio play failed"));
                 } catch(e) {}
 
                 content.innerHTML = `
                     <div class="animate-slide-up">
-                        <div class="w-24 h-24 bg-green-500 rounded-full mx-auto mb-6 flex items-center justify-center shadow-2xl ring-4 ring-green-300">
-                            <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <div class="w-20 h-20 md:w-24 md:h-24 bg-green-500 rounded-full mx-auto mb-6 flex items-center justify-center shadow-2xl ring-4 ring-green-300">
+                            <svg class="w-10 h-10 md:w-12 md:h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                         </div>
-                        <h2 class="text-4xl font-bold text-green-100 mb-2">CONNECTED</h2>
-                        <p class="text-2xl text-white mb-8">Help is on the way.</p>
-                        <button onclick="endEmergency()" class="mt-8 bg-white text-red-600 px-10 py-4 rounded-full font-bold text-xl shadow-xl hover:bg-gray-100 transition transform hover:scale-105">
+                        <h2 class="text-3xl md:text-4xl font-bold text-green-100 mb-2">CONNECTED</h2>
+                        <p class="text-xl md:text-2xl text-white mb-8">Help is on the way.</p>
+                        <button onclick="endEmergency()" class="mt-8 bg-white text-red-600 px-8 py-3 md:px-10 md:py-4 rounded-full font-bold text-lg shadow-xl hover:bg-gray-100 transition transform hover:scale-105">
                             End Emergency Session
                         </button>
                     </div>
@@ -600,14 +657,13 @@
                 if (temp > 38.5) risks.push("High Fever");
                 else if (temp > 37.5) risks.push("Mild Fever");
 
-                if (hr > 110) risks.push("Elevated Heart Rate (Tachycardia)");
+                if (hr > 110) risks.push("Elevated Heart Rate");
                 else if (hr > 100) risks.push("Slightly High Heart Rate");
 
-                if (sys > 140 || dia > 90) risks.push("Hypertension (High BP)");
+                if (sys > 140 || dia > 90) risks.push("Hypertension");
                 else if (sys > 120 || dia > 80) risks.push("Elevated BP");
-                else if (sys < 90) risks.push("Low BP (Hypotension)");
+                else if (sys < 90) risks.push("Low BP");
 
-                // Determine Severity
                 let isCritical = false;
                 if (risks.length >= 2 || (temp > 39 || hr > 120 || sys > 160)) {
                     statusColor = 'text-red-400';
@@ -617,12 +673,12 @@
                 } else if (risks.length === 1) {
                     statusColor = 'text-orange-400';
                     statusIcon = '🟠';
-                    recommendation = "One parameter is off. Monitor closely. If it persists, see a specialist.";
+                    recommendation = "One parameter is off. Monitor closely.";
                 }
 
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-3">
-                        <div class="font-bold text-xl ${statusColor} flex items-center gap-2">
+                        <div class="font-bold text-lg md:text-xl ${statusColor} flex items-center gap-2">
                             ${statusIcon} ${risks.length === 0 ? 'Healthy' : 'Attention Needed'}
                         </div>
                         <div class="text-xs font-mono text-slate-400 bg-slate-800 px-2 py-1 rounded">AI VERIFIED</div>
@@ -635,17 +691,14 @@
                             <span>Heart Rate:</span> <span class="${hr>100?'text-red-300':'text-slate-300'} font-mono">${hr} bpm</span>
                         </div>
                         <div class="flex justify-between border-b border-slate-700 pb-1">
-                            <span>Blood Pressure:</span> <span class="${sys>120?'text-red-300':'text-slate-300'} font-mono">${sys}/${dia}</span>
+                            <span>BP:</span> <span class="${sys>120?'text-red-300':'text-slate-300'} font-mono">${sys}/${dia}</span>
                         </div>
                     </div>
                     <p class="text-sm text-white leading-relaxed">${recommendation}</p>
                 `;
 
-                // AI Decision: AUTO CONNECT if Critical
                 if (isCritical) {
-                    setTimeout(() => {
-                        startEmergencyProtocol();
-                    }, 1500);
+                    setTimeout(() => { startEmergencyProtocol(); }, 1500);
                 }
 
             }, 1000);
@@ -656,7 +709,7 @@
             const txt = document.getElementById('typing-text');
             box.classList.remove('hidden');
             txt.innerHTML = '';
-            const data = { 'Fever': "Analysis: High viral load suspected. Immediate CBC recommended. Stay hydrated.", 'Chest': "Analysis: Cardiac distress indicators detected. Immediate ECG required.", 'Fracture': "Analysis: Orthopedic injury. Immobilization critical. X-Ray ordered." };
+            const data = { 'Fever': "Analysis: High viral load suspected. Immediate CBC recommended.", 'Chest': "Analysis: Cardiac distress indicators detected. Immediate ECG required.", 'Fracture': "Analysis: Orthopedic injury. Immobilization critical. X-Ray ordered." };
             const message = data[issue] || "Waiting for input...";
             let i = 0;
             box.style.opacity = 1;
@@ -688,75 +741,43 @@
             }, 1000);
         }
 
-        // --- 7. VIEW: ADMIN (WITH AI DATABASE) ---
+        // --- 7. VIEW: ADMIN ---
         function renderAdmin(c) {
             const pending = DB.appointments.filter(a => a.status === 'pending');
-            // Filter for patients who are past the 'pending' stage (accepted, diagnosed, admitted)
             const history = DB.appointments.filter(a => a.status !== 'pending').sort((a,b) => b.id - a.id);
             
             c.innerHTML = `
-            <div class="flex justify-between items-end mb-10">
-                <h2 class="text-4xl font-extrabold text-slate-800">Admin Dashboard</h2>
-                <span class="bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm animate-pulse-fast">${pending.length} Pending</span>
+            <div class="flex flex-col md:flex-row justify-between md:items-end mb-8 md:mb-10 gap-4">
+                <h2 class="text-2xl md:text-4xl font-extrabold text-slate-800">Admin Dashboard</h2>
+                <span class="bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm animate-pulse-fast w-max">${pending.length} Pending</span>
             </div>
 
             <!-- SECTION 1: PENDING REQUESTS -->
-            ${pending.length === 0 ? `<div class="bg-white p-16 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in mb-12"><div class="text-5xl mb-4 opacity-40">📭</div><h3 class="text-xl font-bold text-slate-800">No Pending Requests</h3><p class="text-slate-500 mt-2">Inbox is clear.</p></div>` : `<div class="grid lg:grid-cols-3 gap-6 mb-12">${pending.map(a => `<div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between h-full relative overflow-hidden"><div class="mb-6"><div class="flex justify-between items-start"><div class="font-bold text-xl text-slate-800">${a.n}</div><span class="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border border-yellow-200">PENDING</span></div><div class="text-sm text-slate-500 space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-100"><div class="flex items-center gap-2"><span>📞</span> ${a.phone}</div><div class="flex items-center gap-2"><span>🎂</span> ${a.age} Years Old</div><div class="mt-3 pt-3 border-t border-slate-100 border-dashed">Issue: <span class="font-bold text-slate-700 ml-2">${a.issue}</span></div></div></div><button onclick="approveReq(${a.id}, this)" class="w-full mt-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-2xl transform active:scale-95 transition-all duration-200">Approve & Assign</button></div>`).join('')}</div>`}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
+                ${pending.length === 0 ? `<div class="col-span-full bg-white p-12 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in"><div class="text-5xl mb-4 opacity-40">📭</div><h3 class="text-xl font-bold text-slate-800">No Pending Requests</h3></div>` : pending.map(a => `<div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between h-full relative overflow-hidden"><div class="mb-6"><div class="flex justify-between items-start"><div class="font-bold text-lg md:text-xl text-slate-800">${a.n}</div><span class="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border border-yellow-200">PENDING</span></div><div class="text-sm text-slate-500 space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-100"><div class="flex items-center gap-2"><span>📞</span> ${a.phone}</div><div class="flex items-center gap-2"><span>🎂</span> ${a.age} Years Old</div><div class="mt-3 pt-3 border-t border-slate-100 border-dashed">Issue: <span class="font-bold text-slate-700 ml-2">${a.issue}</span></div></div></div><button onclick="approveReq(${a.id}, this)" class="w-full mt-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 md:py-4 rounded-2xl shadow-lg hover:shadow-2xl transform active:scale-95 transition-all duration-200">Approve & Assign</button></div>`).join('')}
+            </div>
 
             <!-- SECTION 2: AI PATIENT DATABASE -->
             <div class="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in">
-                <div class="p-6 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="p-4 md:p-6 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xl shadow-lg">
-                            🗄️
-                        </div>
-                        <div>
-                            <h3 class="text-2xl font-extrabold text-slate-800">AI Patient Database</h3>
-                            <p class="text-xs text-slate-500 font-medium">Secure Cloud Records & Live Sync</p>
-                        </div>
+                        <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg md:text-xl shadow-lg">🗄️</div>
+                        <div><h3 class="text-xl md:text-2xl font-extrabold text-slate-800">AI Patient Database</h3><p class="text-xs text-slate-500 font-medium">Secure Cloud Records</p></div>
                     </div>
-                    <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span class="text-xs font-bold text-emerald-600 font-mono">LIVE SYNC ACTIVE</span>
-                    </div>
+                    <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span class="text-xs font-bold text-emerald-600 font-mono">LIVE SYNC ACTIVE</span></div>
                 </div>
-
-                <!-- Database Table -->
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-100">
-                                <th class="p-4">Patient</th>
-                                <th class="p-4">Diagnosis (AI)</th>
-                                <th class="p-4">Priority</th>
-                                <th class="p-4">Medicine</th>
-                                <th class="p-4">Bed</th>
-                                <th class="p-4">Status</th>
-                            </tr>
-                        </thead>
+                    <table class="w-full text-left border-collapse min-w-[600px]">
+                        <thead><tr class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-100"><th class="p-4">Patient</th><th class="p-4">Diagnosis (AI)</th><th class="p-4">Priority</th><th class="p-4">Medicine</th><th class="p-4">Bed</th><th class="p-4">Status</th></tr></thead>
                         <tbody class="text-sm">
-                            ${history.length === 0 ? '<tr><td colspan="6" class="p-8 text-center text-slate-400">Database is empty. Approve patients to start the workflow.</td></tr>' : history.map(a => `
+                            ${history.length === 0 ? '<tr><td colspan="6" class="p-8 text-center text-slate-400">Database is empty.</td></tr>' : history.map(a => `
                                 <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                    <td class="p-4">
-                                        <div class="font-bold text-slate-800">${a.n}</div>
-                                        <div class="text-xs text-slate-400">Doc: ${a.doc || '-'}</div>
-                                    </td>
-                                    <td class="p-4">
-                                        <div class="font-medium text-slate-700">${a.disease || '<span class="italic text-slate-400">Awaiting AI...</span>'}</div>
-                                        ${a.vitals ? `<div class="text-xs text-slate-500 mt-1">T:${a.vitals.temp}°C / HR:${a.vitals.hr}</div>` : ''}
-                                    </td>
-                                    <td class="p-4">
-                                        <span class="px-2 py-1 rounded text-xs font-bold ${getLevelColor(a.level)}">${a.level || 'Processing'}</span>
-                                    </td>
-                                    <td class="p-4">
-                                        ${a.meds && a.meds.length > 0 ? `<div class="flex flex-wrap gap-1 max-w-[150px]">${a.meds.map(m => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-100 px-1.5 py-0.5 rounded text-[10px] font-bold">${m}</span>`).join('')}</div>` : '<span class="text-slate-300 text-xs">-</span>'}
-                                    </td>
-                                    <td class="p-4">
-                                        <span class="font-mono text-sm ${a.bed ? 'text-emerald-600 font-bold' : 'text-slate-400'}">${a.bed ? 'Bed ' + a.bed : 'Waiting...'}</span>
-                                    </td>
-                                    <td class="p-4">
-                                        <span class="px-2 py-1 rounded-full text-xs font-bold uppercase border ${getStatusBadge(a.status)}">${a.status}</span>
-                                    </td>
+                                    <td class="p-4"><div class="font-bold text-slate-800">${a.n}</div><div class="text-xs text-slate-400">Doc: ${a.doc || '-'}</div></td>
+                                    <td class="p-4"><div class="font-medium text-slate-700">${a.disease || '<span class="italic text-slate-400">Awaiting AI...</span>'}</div>${a.vitals ? `<div class="text-xs text-slate-500 mt-1">T:${a.vitals.temp}°C / HR:${a.vitals.hr}</div>` : ''}</td>
+                                    <td class="p-4"><span class="px-2 py-1 rounded text-xs font-bold ${getLevelColor(a.level)}">${a.level || 'Processing'}</span></td>
+                                    <td class="p-4">${a.meds && a.meds.length > 0 ? `<div class="flex flex-wrap gap-1 max-w-[150px]">${a.meds.map(m => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-100 px-1.5 py-0.5 rounded text-[10px] font-bold">${m}</span>`).join('')}</div>` : '<span class="text-slate-300 text-xs">-</span>'}</td>
+                                    <td class="p-4"><span class="font-mono text-sm ${a.bed ? 'text-emerald-600 font-bold' : 'text-slate-400'}">${a.bed ? 'Bed ' + a.bed : 'Waiting...'}</span></td>
+                                    <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-bold uppercase border ${getStatusBadge(a.status)}">${a.status}</span></td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -790,36 +811,39 @@
             }, 800);
         }
 
-        // --- 8. VIEW: DOCTOR (WITH MEDICINE FEATURE) ---
+        // --- 8. VIEW: DOCTOR ---
         function renderDoctor(c) {
             const patients = DB.appointments.filter(a => a.status === 'accepted');
-            c.innerHTML = `<h2 class="text-4xl font-extrabold text-slate-800 mb-10">AI Diagnosis Center</h2>${patients.length === 0 ? `<div class="bg-white p-16 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in"><div class="text-5xl mb-4 opacity-40">🩺</div><h3 class="text-xl font-bold text-slate-800">Waiting Room Empty</h3><p class="text-slate-500 mt-2">No assigned patients yet.</p></div>` : `<div class="grid lg:grid-cols-2 gap-8">${patients.map(a => `<div class="bg-white rounded-3xl p-8 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-300"><div class="flex justify-between items-center mb-6"><div class="font-bold text-2xl text-slate-800">${a.n}</div><div class="text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100 font-bold tracking-wide">${a.doc}</div></div><div class="text-sm text-slate-500 mb-6">Assigned Doc: ${a.doc} | Issue: ${a.issue}</div><div class="bg-slate-50 rounded-2xl p-5 mb-6 border border-slate-100"><div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Enter Patient Vitals</div><div class="flex gap-4"><div class="flex-1"><label class="text-sm font-medium text-slate-600 mb-1 ml-1">Heart Rate</label><input type="number" id="hr-${a.id}" placeholder="bpm" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white shadow-sm"></div><div class="flex-1"><label class="text-sm font-medium text-slate-600 mb-1 ml-1">Temp</label><input type="number" id="temp-${a.id}" placeholder="°C" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white shadow-sm"></div></div></div>
-                
-                <!-- AI Diagnosis Result Area -->
-                <div id="result-${a.id}" class="hidden mb-6 animate-fade-in">
-                    <div class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-5 relative overflow-hidden mb-4">
-                        <div class="absolute top-0 right-0 p-2"><svg class="w-6 h-6 text-emerald-500 animate-pulse-fast" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100-16 8 8 0 000 16zm0 14a6 6 0 110-12 6 6 0 000 12zm-1-9a1 1 0 100-2 0v5a1 1 0 001 2h2a1 1 0 001-2v-5a1 1 0 000-2z"></path></svg></div>
-                        <div class="flex justify-between items-center mb-2"><div class="text-sm font-bold text-emerald-700 flex items-center gap-2">🤖 AI Analysis Result</div><div class="text-xs text-emerald-600 font-mono bg-emerald-100 px-2 py-1 rounded-lg">98% CONFIDENCE</div></div>
-                        <div class="w-full bg-emerald-200 rounded-full h-2.5 overflow-hidden mb-3"><div class="bg-emerald-500 h-full rounded-full" style="width: 0%; transition: width 1.5s ease-out;"></div></div>
-                        <div id="disease-${a.id}" class="font-bold text-slate-800 text-xl">Analyzing...</div>
+            c.innerHTML = `<h2 class="text-2xl md:text-4xl font-extrabold text-slate-800 mb-8 md:mb-10">AI Diagnosis Center</h2>${patients.length === 0 ? `<div class="bg-white p-12 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in"><div class="text-5xl mb-4 opacity-40">🩺</div><h3 class="text-xl font-bold text-slate-800">Waiting Room Empty</h3></div>` : `<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">${patients.map(a => `
+                <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-300">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="font-bold text-xl md:text-2xl text-slate-800">${a.n}</div>
+                        <div class="text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100 font-bold tracking-wide">${a.doc}</div>
                     </div>
-                </div>
-
-                <!-- Medicine Area (Hidden initially) -->
-                <div id="meds-container-${a.id}" class="hidden mb-6 animate-fade-in">
-                    <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-5">
-                        <div class="flex items-center gap-2 mb-3 text-indigo-800 font-bold">
-                            <span>💊</span> <span class="uppercase text-xs tracking-wide opacity-70">Suggested Medication</span>
+                    <div class="text-sm text-slate-500 mb-6">Assigned Doc: ${a.doc} | Issue: ${a.issue}</div>
+                    <div class="bg-slate-50 rounded-2xl p-5 mb-6 border border-slate-100">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Enter Patient Vitals</div>
+                        <div class="flex gap-4">
+                            <div class="flex-1"><label class="text-sm font-medium text-slate-600 mb-1 ml-1">Heart Rate</label><input type="number" id="hr-${a.id}" placeholder="bpm" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white shadow-sm"></div>
+                            <div class="flex-1"><label class="text-sm font-medium text-slate-600 mb-1 ml-1">Temp</label><input type="number" id="temp-${a.id}" placeholder="°C" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white shadow-sm"></div>
                         </div>
-                        <div id="meds-list-${a.id}" class="flex flex-wrap gap-2 mb-4"></div>
-                        <button id="btn-prescribe-${a.id}" onclick="prescribeMeds(${a.id})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-200 flex items-center justify-center gap-2">
-                            <span>Prescribe & Send to Nurse</span>
-                            <span>➔</span>
-                        </button>
                     </div>
-                </div>
-
-                <button id="diag-btn-${a.id}" onclick="runDiagnosis(${a.id}, this)" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-2xl transform active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"><span>Run AI Diagnosis</span><span class="text-xl">🔬</span></button></div>`).join('')}</div>`}`;
+                    <div id="result-${a.id}" class="hidden mb-6 animate-fade-in">
+                        <div class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-5 relative overflow-hidden mb-4">
+                            <div class="flex justify-between items-center mb-2"><div class="text-sm font-bold text-emerald-700 flex items-center gap-2">🤖 AI Analysis Result</div><div class="text-xs text-emerald-600 font-mono bg-emerald-100 px-2 py-1 rounded-lg">98% CONFIDENCE</div></div>
+                            <div class="w-full bg-emerald-200 rounded-full h-2.5 overflow-hidden mb-3"><div class="bg-emerald-500 h-full rounded-full" style="width: 0%; transition: width 1.5s ease-out;"></div></div>
+                            <div id="disease-${a.id}" class="font-bold text-slate-800 text-lg md:text-xl">Analyzing...</div>
+                        </div>
+                    </div>
+                    <div id="meds-container-${a.id}" class="hidden mb-6 animate-fade-in">
+                        <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-5">
+                            <div class="flex items-center gap-2 mb-3 text-indigo-800 font-bold"><span>💊</span> <span class="uppercase text-xs tracking-wide opacity-70">Suggested Medication</span></div>
+                            <div id="meds-list-${a.id}" class="flex flex-wrap gap-2 mb-4"></div>
+                            <button id="btn-prescribe-${a.id}" onclick="prescribeMeds(${a.id})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"><span>Prescribe & Send to Nurse</span><span>➔</span></button>
+                        </div>
+                    </div>
+                    <button id="diag-btn-${a.id}" onclick="runDiagnosis(${a.id}, this)" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 md:py-4 rounded-2xl shadow-lg hover:shadow-2xl transform active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"><span>Run AI Diagnosis</span><span class="text-xl">🔬</span></button>
+                </div>`).join('')}</div>`}`;
         }
         function runDiagnosis(id, btn) {
             const apt = DB.appointments.find(a => a.id === id);
@@ -834,107 +858,51 @@
                 let level = "Stable (ESI 3)";
                 let suggestedMeds = ["Paracetamol 500mg", "ORS (Hydration)", "Bed Rest"];
 
-                // Simple Logic Tree for Demo
-                if(temp > 39 && hr > 100) { 
-                    disease = "Sepsis / Critical"; 
-                    level = "Critical (ESI 1)"; 
-                    suggestedMeds = ["IV Antibiotics", "Vasopressors", "ICU Admission"];
-                } else if(hr > 110) { 
-                    disease = "Tachycardia"; 
-                    level = "Urgent (ESI 2)"; 
-                    suggestedMeds = ["Beta Blockers", "ECG Monitoring", "Sedation"];
-                } else if(temp > 38) { 
-                    disease = "High Grade Fever"; 
-                    level = "Urgent (ESI 2)"; 
-                    suggestedMeds = ["Ibuprofen", "Cold Compress", "Fluid Intake"];
-                } else {
-                    // Fracture logic (simulated via low temp/high hr assumption or random for demo)
-                    if(Math.random() > 0.7) {
-                        disease = "Bone Fracture";
-                        level = "Urgent (ESI 2)";
-                        suggestedMeds = ["Analgesics", "Calcium Supplements", "Immobilization"];
-                    }
-                }
+                if(temp > 39 && hr > 100) { disease = "Sepsis / Critical"; level = "Critical (ESI 1)"; suggestedMeds = ["IV Antibiotics", "Vasopressors", "ICU Admission"]; } 
+                else if(hr > 110) { disease = "Tachycardia"; level = "Urgent (ESI 2)"; suggestedMeds = ["Beta Blockers", "ECG Monitoring", "Sedation"]; } 
+                else if(temp > 38) { disease = "High Grade Fever"; level = "Urgent (ESI 2)"; suggestedMeds = ["Ibuprofen", "Cold Compress", "Fluid Intake"]; }
+                else if(Math.random() > 0.7) { disease = "Bone Fracture"; level = "Urgent (ESI 2)"; suggestedMeds = ["Analgesics", "Calcium", "Immobilization"]; }
 
-                // Update Data
-                apt.disease = disease; 
-                apt.level = level; 
-                apt.vitals = { hr, temp }; 
-                apt.meds = suggestedMeds; // Save meds
-                apt.status = 'diagnosed'; // Status remains diagnosed, but marked as ready for nurse
-
-                // Show Result
+                apt.disease = disease; apt.level = level; apt.vitals = { hr, temp }; apt.meds = suggestedMeds; apt.status = 'diagnosed';
                 resBox.classList.remove('hidden');
                 setTimeout(() => { resBox.querySelector('.bg-emerald-500').style.width = '98%'; document.getElementById(`disease-${id}`).innerText = disease; }, 100);
-                
-                // Show Medicine Section
-                const medsContainer = document.getElementById(`meds-container-${id}`);
+                const medsContainer = document.getElementById(`meds-container-${a.id}`);
                 const medsList = document.getElementById(`meds-list-${id}`);
                 medsContainer.classList.remove('hidden');
                 medsList.innerHTML = suggestedMeds.map(m => `<span class="bg-white px-3 py-1.5 rounded-full text-xs font-bold text-indigo-700 border border-indigo-200 shadow-sm flex items-center gap-1"><span>💊</span> ${m}</span>`).join('');
-
                 showToast(`Diagnosed: ${disease}`, 'success');
-                
-                // Hide Diagnosis Button to force using the Prescription button
                 btn.classList.add('hidden');
             }, 1500);
         }
-
-        // UPDATED: Send Prescription to Nurse
         function prescribeMeds(id) {
-            const apt = DB.appointments.find(a => a.id === id);
             const btn = document.getElementById(`btn-prescribe-${id}`);
-            
-            // UI Feedback for Doctor
             btn.disabled = true;
             btn.innerHTML = `<span>Sent to Nurse ✅</span>`;
-            btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-md', 'hover:shadow-lg');
-            btn.classList.add('bg-emerald-500', 'cursor-default', 'shadow-sm');
-            
-            // Logic: Save DB
-            // Meds are already in apt.meds, we just need to ensure DB is saved
+            btn.classList.replace('bg-indigo-600', 'bg-emerald-500');
+            btn.classList.replace('hover:bg-indigo-700', 'cursor-default');
             saveDB();
-            
             showToast('Prescription sent to Nurse Portal', 'success');
         }
 
-        // --- 9. VIEW: NURSE (VISUAL BED AVAILABILITY + MEDS DISPLAY) ---
+        // --- 9. VIEW: NURSE ---
         function renderNurse(c) {
             const patients = DB.appointments.filter(a => a.status === 'diagnosed');
             const bestBed = DB.beds.find(b => b.status === 'free');
             const bestRoughBed = DB.roughBeds.find(b => b.status === 'free');
-
-            // Stats for Dashboard
             const mainFree = DB.beds.filter(b => b.status === 'free').length;
             const emgFree = DB.roughBeds.filter(b => b.status === 'free').length;
 
             c.innerHTML = `
-            <h2 class="text-4xl font-extrabold text-slate-800 mb-8">Smart Bed Management</h2>
+            <h2 class="text-2xl md:text-4xl font-extrabold text-slate-800 mb-6 md:mb-8">Smart Bed Management</h2>
             
-            <!-- Availability Dashboard -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-fade-in">
-                <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 flex items-center justify-between">
-                    <div><div class="text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Main Ward</div><div class="text-3xl font-extrabold text-indigo-600">${mainFree} <span class="text-slate-300 text-lg font-normal">Free</span></div></div>
-                    <div class="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-2xl">🏥</div>
-                </div>
-                <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 flex items-center justify-between">
-                    <div><div class="text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Emergency</div><div class="text-3xl font-extrabold text-red-600">${emgFree} <span class="text-slate-300 text-lg font-normal">Free</span></div></div>
-                    <div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-2xl">🚑</div>
-                </div>
+                <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 flex items-center justify-between"><div><div class="text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Main Ward</div><div class="text-3xl font-extrabold text-indigo-600">${mainFree} <span class="text-slate-300 text-lg font-normal">Free</span></div></div><div class="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-2xl">🏥</div></div>
+                <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 flex items-center justify-between"><div><div class="text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Emergency</div><div class="text-3xl font-extrabold text-red-600">${emgFree} <span class="text-slate-300 text-lg font-normal">Free</span></div></div><div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-2xl">🚑</div></div>
             </div>
 
-            <div class="grid lg:grid-cols-12 gap-8 items-start">
-                <!-- LEFT COLUMN: ACTIONS -->
+            <div class="grid lg:grid-cols-12 gap-6 md:gap-8 items-start">
                 <div class="lg:col-span-4 space-y-6">
-                    <div class="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-6 shadow-xl text-white relative overflow-hidden">
-                        <div class="absolute -right-6 -bottom-6 text-9xl opacity-10">🤖</div>
-                        <div class="relative z-10">
-                            <div class="font-bold text-xl mb-2">AI Bed Allocation</div>
-                            <p class="text-blue-100 text-sm mb-4">Optimizing placement based on severity and availability.</p>
-                        </div>
-                    </div>
-
-                    ${patients.length === 0 ? `<div class="bg-white p-8 rounded-3xl text-center shadow-xl border border-slate-100"><div class="text-4xl mb-2 opacity-40">✅</div><h3 class="font-bold text-slate-800">No Patients Waiting</h3><p class="text-sm text-slate-500 mt-1">Queue is empty.</p></div>` : patients.map(a => `
+                    ${patients.length === 0 ? `<div class="bg-white p-8 rounded-3xl text-center shadow-xl border border-slate-100"><div class="text-4xl mb-2 opacity-40">✅</div><h3 class="font-bold text-slate-800">No Patients Waiting</h3></div>` : patients.map(a => `
                         <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 animate-fade-in">
                             <div class="flex justify-between items-center mb-4">
                                 <div class="font-bold text-lg text-slate-800">${a.n}</div>
@@ -943,70 +911,27 @@
                             <div class="text-sm text-slate-500 space-y-2 mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                                 <div>Diagnosis: <span class="font-bold text-red-600">${a.disease}</span></div>
                                 <div class="flex gap-4"><span>HR: <span class="font-medium">${a.vitals.hr}</span></span> • <span>Temp: <span class="font-medium">${a.vitals.temp}°C</span></span></div>
-                                
-                                <!-- MEDICINE DISPLAY SECTION -->
-                                ${a.meds && a.meds.length > 0 ? `
-                                <div class="mt-3 pt-3 border-t-2 border-dashed border-slate-200">
-                                    <div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase mb-2">
-                                        <span class="animate-pulse">💊</span> Prescribed
-                                    </div>
-                                    <div class="flex flex-wrap gap-1.5">
-                                        ${a.meds.map(m => `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-1 rounded-md text-xs font-semibold shadow-sm">${m}</span>`).join('')}
-                                    </div>
-                                </div>` : ''}
-
+                                ${a.meds && a.meds.length > 0 ? `<div class="mt-3 pt-3 border-t-2 border-dashed border-slate-200"><div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase mb-2"><span class="animate-pulse">💊</span> Prescribed</div><div class="flex flex-wrap gap-1.5">${a.meds.map(m => `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-1 rounded-md text-xs font-semibold shadow-sm">${m}</span>`).join('')}</div></div>` : ''}
                             </div>
-                            <div id="bed-res-${a.id}" class="hidden bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4 text-sm text-blue-800 flex items-center gap-2">
-                                <span class="animate-pulse">🔍</span><span id="bed-txt-${a.id}">Scanning Hospital DB...</span>
-                            </div>
-                            <button onclick="assignBed(${a.id}, this)" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-200">
-                                Allocate AI Suggested Bed
-                            </button>
+                            <div id="bed-res-${a.id}" class="hidden bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4 text-sm text-blue-800 flex items-center gap-2"><span class="animate-pulse">🔍</span><span id="bed-txt-${a.id}">Scanning Hospital DB...</span></div>
+                            <button onclick="assignBed(${a.id}, this)" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-200">Allocate AI Suggested Bed</button>
                         </div>
                     `).join('')}
                 </div>
 
-                <!-- RIGHT COLUMN: VISUAL BED GRIDS -->
                 <div class="lg:col-span-8 space-y-8">
-                    
-                    <!-- Emergency / Rough Beds -->
                     <div>
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-bold text-lg text-slate-700 flex items-center gap-2">
-                                <span class="bg-red-100 text-red-600 p-1.5 rounded-lg text-sm">R1-R5</span>
-                                Emergency Triage
-                            </h3>
-                            <div class="flex items-center gap-2 text-xs text-slate-400">
-                                <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-red-500"></div> Free</span>
-                                <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-slate-300"></div> Occupied</span>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100">
-                            <div class="grid grid-cols-5 gap-4">
-                                ${DB.roughBeds.map(b => generateBedHTML(b, bestBed, true)).join('')}
-                            </div>
+                        <div class="flex items-center justify-between mb-4"><h3 class="font-bold text-lg text-slate-700 flex items-center gap-2"><span class="bg-red-100 text-red-600 p-1.5 rounded-lg text-sm">R1-R5</span> Emergency Triage</h3></div>
+                        <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-100">
+                            <div class="grid grid-cols-5 gap-3 md:gap-4">${DB.roughBeds.map(b => generateBedHTML(b, bestBed, true)).join('')}</div>
                         </div>
                     </div>
-
-                    <!-- General Ward Beds -->
                     <div>
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-bold text-lg text-slate-700 flex items-center gap-2">
-                                <span class="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg text-sm">E1-E20</span>
-                                Main Ward (General)
-                            </h3>
-                            <div class="flex items-center gap-2 text-xs text-slate-400">
-                                <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-emerald-500"></div> Free</span>
-                                <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-slate-300"></div> Occupied</span>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100">
-                            <div class="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">
-                                ${DB.beds.map(b => generateBedHTML(b, bestBed, false)).join('')}
-                            </div>
+                        <div class="flex items-center justify-between mb-4"><h3 class="font-bold text-lg text-slate-700 flex items-center gap-2"><span class="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg text-sm">E1-E20</span> Main Ward (General)</h3></div>
+                        <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-100">
+                            <div class="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">${DB.beds.map(b => generateBedHTML(b, bestBed, false)).join('')}</div>
                         </div>
                     </div>
-
                 </div>
             </div>`;
         }
@@ -1014,46 +939,14 @@
         function generateBedHTML(b, suggestedBed, isRough) {
             const isFree = b.status === 'free';
             const isSuggested = suggestedBed && b.id === suggestedBed.id;
-            
-            // Visual Styling for "Small Bed Card"
             let baseClasses = "relative w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all duration-300 hover:-translate-y-1 select-none ";
-            
-            // Colors based on Section (Emergency vs General) and Status
             if (isRough) {
-                // Emergency Beds
-                if (isFree) {
-                    baseClasses += "bg-red-50 border-red-200 text-red-600 shadow-sm hover:shadow-md hover:border-red-400";
-                } else {
-                    baseClasses += "bg-slate-50 border-slate-100 text-slate-300 opacity-60 cursor-not-allowed";
-                }
+                baseClasses += isFree ? "bg-red-50 border-red-200 text-red-600 shadow-sm hover:shadow-md hover:border-red-400" : "bg-slate-50 border-slate-100 text-slate-300 opacity-60 cursor-not-allowed";
             } else {
-                // General Beds
-                if (isFree) {
-                    baseClasses += "bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm hover:shadow-md hover:border-emerald-400";
-                } else {
-                    baseClasses += "bg-slate-50 border-slate-100 text-slate-300 opacity-60 cursor-not-allowed";
-                }
+                baseClasses += isFree ? "bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm hover:shadow-md hover:border-emerald-400" : "bg-slate-50 border-slate-100 text-slate-300 opacity-60 cursor-not-allowed";
             }
-
-            // Suggestion Highlight
-            if (isSuggested) {
-                baseClasses += isRough ? " ai-bed-highlight-rough bg-red-100 border-red-500" : " ai-bed-highlight bg-indigo-100 border-indigo-500";
-            }
-
-            return `
-                <div class="${baseClasses}">
-                    <!-- Bed Icon -->
-                    <div class="text-2xl mb-1 transition-transform duration-300 ${isFree ? 'scale-100' : 'scale-90 grayscale'}">🛏️</div>
-                    
-                    <!-- Label -->
-                    <div class="text-xs font-bold font-mono tracking-wide">${b.label}</div>
-                    
-                    <!-- Status Indicator (Dot) -->
-                    <div class="absolute top-2 right-2 w-2 h-2 rounded-full ${isFree ? (isRough ? 'bg-red-500' : 'bg-emerald-500') : 'bg-slate-300'}"></div>
-
-                    ${isSuggested ? `<div class="absolute -top-2 -right-2 ${isRough?'bg-red-600':'bg-indigo-600'} text-white text-[10px] px-1.5 py-0.5 rounded-full shadow-md animate-bounce border border-white font-bold">AI</div>` : ''}
-                </div>
-            `;
+            if (isSuggested) baseClasses += isRough ? " ai-bed-highlight-rough bg-red-100 border-red-500" : " ai-bed-highlight bg-indigo-100 border-indigo-500";
+            return `<div class="${baseClasses}"><div class="text-xl md:text-2xl mb-1 transition-transform duration-300 ${isFree ? 'scale-100' : 'scale-90 grayscale'}">🛏️</div><div class="text-[10px] md:text-xs font-bold font-mono tracking-wide">${b.label}</div><div class="absolute top-2 right-2 w-2 h-2 rounded-full ${isFree ? (isRough ? 'bg-red-500' : 'bg-emerald-500') : 'bg-slate-300'}"></div>${isSuggested ? `<div class="absolute -top-2 -right-2 ${isRough?'bg-red-600':'bg-indigo-600'} text-white text-[10px] px-1.5 py-0.5 rounded-full shadow-md animate-bounce border border-white font-bold">AI</div>` : ''}</div>`;
         }
         function assignBed(id, btn) {
             const apt = DB.appointments.find(a => a.id === id);
@@ -1131,8 +1024,10 @@
         function showToast(msg, type) {
             const area = document.getElementById('toast-area');
             const t = document.createElement('div');
-            if(type === 'success') { t.className = "bg-slate-800 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-emerald-500"; } else if (type === 'warning') { t.className = "bg-slate-800 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-orange-500"; } else { t.className = "bg-red-500 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-red-200"; }
-            t.innerHTML = `<span class="text-2xl">${type==='success'?'✅':(type==='warning'?'⚠️':'🚨')}</span> <span class="font-semibold text-lg">${msg}</span>`;
+            if(type === 'success') { t.className = "bg-slate-800 text-white px-6 py-3 md:px-8 md:py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-emerald-500"; } 
+            else if (type === 'warning') { t.className = "bg-slate-800 text-white px-6 py-3 md:px-8 md:py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-orange-500"; } 
+            else { t.className = "bg-red-500 text-white px-6 py-3 md:px-8 md:py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-red-200"; }
+            t.innerHTML = `<span class="text-xl">${type==='success'?'✅':(type==='warning'?'⚠️':'🚨')}</span> <span class="font-semibold text-sm md:text-lg">${msg}</span>`;
             area.appendChild(t);
             setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(20px)'; setTimeout(() => t.remove(), 300); }, 3000);
         }
