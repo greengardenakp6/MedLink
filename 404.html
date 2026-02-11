@@ -133,8 +133,6 @@
         </div>
 
         <!-- SIDEBAR (Fixed on Desktop, Off-canvas on Mobile) -->
-        <!-- On Mobile: Transform -translate-x-full (hidden). When open: translate-x-0. -->
-        <!-- On Desktop: Always visible relative. -->
         <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-100 flex flex-col shadow-xl transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 sidebar-transition">
             <!-- Mobile Close Button -->
             <div class="md:hidden flex justify-end p-4 border-b border-slate-100">
@@ -866,7 +864,7 @@
                 apt.disease = disease; apt.level = level; apt.vitals = { hr, temp }; apt.meds = suggestedMeds; apt.status = 'diagnosed';
                 resBox.classList.remove('hidden');
                 setTimeout(() => { resBox.querySelector('.bg-emerald-500').style.width = '98%'; document.getElementById(`disease-${id}`).innerText = disease; }, 100);
-                const medsContainer = document.getElementById(`meds-container-${a.id}`);
+                const medsContainer = document.getElementById(`meds-container-${id}`);
                 const medsList = document.getElementById(`meds-list-${id}`);
                 medsContainer.classList.remove('hidden');
                 medsList.innerHTML = suggestedMeds.map(m => `<span class="bg-white px-3 py-1.5 rounded-full text-xs font-bold text-indigo-700 border border-indigo-200 shadow-sm flex items-center gap-1"><span>💊</span> ${m}</span>`).join('');
@@ -911,7 +909,17 @@
                             <div class="text-sm text-slate-500 space-y-2 mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                                 <div>Diagnosis: <span class="font-bold text-red-600">${a.disease}</span></div>
                                 <div class="flex gap-4"><span>HR: <span class="font-medium">${a.vitals.hr}</span></span> • <span>Temp: <span class="font-medium">${a.vitals.temp}°C</span></span></div>
-                                ${a.meds && a.meds.length > 0 ? `<div class="mt-3 pt-3 border-t-2 border-dashed border-slate-200"><div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase mb-2"><span class="animate-pulse">💊</span> Prescribed</div><div class="flex flex-wrap gap-1.5">${a.meds.map(m => `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-1 rounded-md text-xs font-semibold shadow-sm">${m}</span>`).join('')}</div></div>` : ''}
+                                
+                                <!-- DYNAMIC MEDICINE DISPLAY -->
+                                ${a.meds && a.meds.length > 0 ? `
+                                <div class="mt-3 pt-3 border-t-2 border-dashed border-slate-200">
+                                    <div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase mb-2">
+                                        <span class="animate-pulse">💊</span> Prescribed
+                                    </div>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        ${a.meds.map(m => `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-1 rounded-md text-xs font-semibold shadow-sm">${m}</span>`).join('')}
+                                    </div>
+                                </div>` : ''}
                             </div>
                             <div id="bed-res-${a.id}" class="hidden bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4 text-sm text-blue-800 flex items-center gap-2"><span class="animate-pulse">🔍</span><span id="bed-txt-${a.id}">Scanning Hospital DB...</span></div>
                             <button onclick="assignBed(${a.id}, this)" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-200">Allocate AI Suggested Bed</button>
