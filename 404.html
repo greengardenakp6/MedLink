@@ -7,7 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FIREBASE SDKS -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
     <script>
      if("serviceWorker" in navigator){
   navigator.serviceWorker.register("service-worker.js");
@@ -66,7 +68,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen w-screen overflow-hidden">
 
-    <!-- ================= EMERGENCY OVERLAY (HIDDEN BY DEFAULT) ================= -->
+    <!-- ================= EMERGENCY OVERLAY ================= -->
     <div id="emergency-overlay" class="fixed inset-0 z-[100] bg-red-700 hidden flex flex-col items-center justify-center text-white transition-opacity duration-500 backdrop-blur-sm">
         <div id="emergency-content" class="text-center relative z-10 p-8 max-w-2xl w-full"></div>
         <div class="absolute inset-0 bg-red-600 pulse-red pointer-events-none"></div>
@@ -85,30 +87,57 @@
                 <button id="tab-login" onclick="setAuthMode('login')" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 relative z-10 text-indigo-600">Login</button>
                 <button id="tab-signup" onclick="setAuthMode('signup')" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 relative z-10 text-slate-500">Sign Up</button>
             </div>
-            <form onsubmit="handleAuth(event)" class="space-y-5">
-                <div id="role-select" class="hidden grid grid-cols-2 gap-3 mb-4">
-                    <button type="button" onclick="selectRole('patient', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-3 flex flex-col items-center gap-2 transition-all duration-300 hover:shadow-lg bg-white">
-                        <div class="text-xl">👤</div>
-                        <div class="font-bold text-slate-700 text-xs">Patient</div>
+            <form onsubmit="handleAuth(event)" class="space-y-4">
+                <div id="role-select" class="hidden grid grid-cols-4 gap-2 mb-4">
+                    <button type="button" onclick="selectRole('patient', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center gap-1 transition-all duration-300 hover:shadow-lg bg-white">
+                        <div class="text-lg">👤</div>
+                        <div class="font-bold text-slate-700 text-[10px]">Patient</div>
                     </button>
-                    <button type="button" onclick="selectRole('admin', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-3 flex flex-col items-center gap-2 transition-all duration-300 hover:shadow-lg bg-white">
-                        <div class="text-xl">⚖️</div>
-                        <div class="font-bold text-slate-700 text-xs">Admin</div>
+                    <button type="button" onclick="selectRole('admin', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center gap-1 transition-all duration-300 hover:shadow-lg bg-white">
+                        <div class="text-lg">⚖️</div>
+                        <div class="font-bold text-slate-700 text-[10px]">Admin</div>
                     </button>
-                    <button type="button" onclick="selectRole('doctor', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-3 flex flex-col items-center gap-2 transition-all duration-300 hover:shadow-lg bg-white">
-                        <div class="text-xl">🩺</div>
-                        <div class="font-bold text-slate-700 text-xs">Doctor</div>
+                    <button type="button" onclick="selectRole('doctor', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center gap-1 transition-all duration-300 hover:shadow-lg bg-white">
+                        <div class="text-lg">🩺</div>
+                        <div class="font-bold text-slate-700 text-[10px]">Doctor</div>
                     </button>
-                    <button type="button" onclick="selectRole('nurse', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-3 flex flex-col items-center gap-2 transition-all duration-300 hover:shadow-lg bg-white">
-                        <div class="text-xl">🏥</div>
-                        <div class="font-bold text-slate-700 text-xs">Nurse</div>
+                    <button type="button" onclick="selectRole('nurse', this)" class="role-card group relative overflow-hidden border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center gap-1 transition-all duration-300 hover:shadow-lg bg-white">
+                        <div class="text-lg">🏥</div>
+                        <div class="font-bold text-slate-700 text-[10px]">Nurse</div>
                     </button>
                 </div>
                 <div class="space-y-2">
                     <input type="text" id="username" placeholder="Username" required class="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white/50 text-base">
                     <input type="password" id="password" placeholder="Password" required class="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white/50 text-base">
                 </div>
-                <button type="submit" id="auth-btn" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2">
+
+                <!-- SIGNUP SPECIFIC: PHONE & FIREBASE RECAPTCHA -->
+                <div id="signup-fields" class="hidden space-y-3">
+                    <input type="tel" id="phone" placeholder="Phone Number (+1 234...)" required class="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-300 bg-white/50 text-base">
+                    
+                    <!-- Firebase Recaptcha Container -->
+                    <div id="recaptcha-container"></div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="otp-input" placeholder="Enter OTP" maxlength="6" class="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all bg-white text-center font-bold tracking-widest">
+                        <button type="button" onclick="requestOTP()" id="get-otp-btn" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-bold transition-colors text-sm">Get OTP</button>
+                    </div>
+                    <div class="text-[10px] text-slate-400 text-center">SMS sent to your phone.</div>
+                </div>
+
+                <!-- CAPTCHA SECTION (LOGIN - MOCK) -->
+                <div id="captcha-container" class="hidden space-y-2">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Security Check</label>
+                    <div class="flex gap-2">
+                        <canvas id="captchaCanvas" width="120" height="40" class="bg-slate-100 rounded-lg border border-slate-200 cursor-pointer" title="Click to reload"></canvas>
+                        <button type="button" onclick="drawCaptcha()" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 transition-colors" title="Reload Captcha">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
+                    </div>
+                    <input type="text" id="captcha-input" placeholder="Enter Captcha" class="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all bg-white text-sm uppercase">
+                </div>
+
+                <button type="submit" id="auth-btn" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2 mt-4">
                     <span id="auth-btn-text">Login</span>
                 </button>
             </form>
@@ -121,7 +150,7 @@
     <!-- ================= MAIN APP ================= -->
     <div id="app-container" class="hidden flex h-full w-full relative">
         
-        <!-- MOBILE HEADER (Visible only on small screens) -->
+        <!-- MOBILE HEADER -->
         <div class="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40 flex items-center justify-between px-4 shadow-sm">
             <div class="flex items-center gap-2">
                 <span class="text-2xl">🩺</span>
@@ -132,9 +161,8 @@
             </button>
         </div>
 
-        <!-- SIDEBAR (Fixed on Desktop, Off-canvas on Mobile) -->
+        <!-- SIDEBAR -->
         <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-100 flex flex-col shadow-xl transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 sidebar-transition">
-            <!-- Mobile Close Button -->
             <div class="md:hidden flex justify-end p-4 border-b border-slate-100">
                 <button onclick="toggleSidebar()" class="text-slate-400 hover:text-slate-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -168,7 +196,6 @@
 
     <!-- ================= CHATBOT ================= -->
     <div class="fixed bottom-4 md:bottom-8 right-4 md:right-8 z-40 flex flex-col items-end pointer-events-none">
-        <!-- Chat Window -->
         <div id="chat-window" class="hidden pointer-events-auto absolute bottom-20 md:bottom-24 right-0 w-[90vw] md:w-96 h-[70vh] md:h-[600px] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col scale-95 opacity-0 origin-bottom-right mb-4">
             <div class="bg-indigo-600 p-4 flex justify-between items-center text-white rounded-t-3xl cursor-pointer shadow-md">
                 <div class="font-bold flex items-center gap-2">🤖 MedTriage Bot <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">AI</span></div>
@@ -177,16 +204,18 @@
             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-slate-50 space-y-3 scroll-smooth">
                 <div class="mr-auto bg-white text-slate-800 rounded-2xl rounded-bl-none p-4 text-sm shadow-sm border border-slate-100 max-w-[90%] animate-slide-up">
                     <p class="font-bold text-indigo-600 mb-1">Hello! I am MedTriage.</p>
-                    <p class="text-sm">I can help assess symptoms or guide you to the right department. <br><span class="text-xs text-slate-400 mt-1 block italic">Disclaimer: I am an AI, not a doctor.</span></p>
+                    <p class="text-sm">I can help assess symptoms. <br><span class="text-xs text-slate-400 mt-1 block italic">Use Mic button for Voice Assistant.</span></p>
                 </div>
             </div>
             <div class="p-4 border-t border-slate-100 bg-white flex gap-3">
+                <button id="voice-btn" onclick="startVoiceInput()" class="w-11 h-11 rounded-full bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-600 transition-colors flex items-center justify-center shrink-0" title="Voice Input">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                </button>
                 <input type="text" id="chat-input" placeholder="Describe symptoms..." onkeypress="if(event.key==='Enter')sendChat()" class="flex-1 bg-slate-50 border-none rounded-full px-5 py-3 text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition-all shadow-inner">
                 <button onclick="sendChat()" class="bg-indigo-600 hover:bg-indigo-700 text-white w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-md hover:shadow-xl shrink-0">➤</button>
             </div>
         </div>
 
-        <!-- Chat Toggle Button -->
         <button id="chat-toggle-btn" onclick="toggleChat()" class="pointer-events-auto w-14 h-14 md:w-16 md:h-16 bg-indigo-600 text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center text-2xl md:text-3xl animate-pulse-fast border-4 border-indigo-200 ring-2 ring-indigo-200">💬</button>
     </div>
 
@@ -195,61 +224,36 @@
     <script>
         // --- 1. FIREBASE CONFIGURATION ---
         const firebaseConfig = {
-            apiKey: "",
-            authDomain: "",
-            databaseURL: "",
-            projectId: "",
+            apiKey: "", // ENTER YOUR API KEY HERE
+            authDomain: "", // ENTER PROJECT ID.firebaseapp.com
+            projectId: "", // ENTER PROJECT ID
             storageBucket: "",
             messagingSenderId: "",
             appId: ""
         };
 
+        let auth = null;
         let db = null;
         let isCloudConnected = false;
+
+        // Initialize Firebase
         try {
-            if (firebaseConfig.apiKey && firebaseConfig.databaseURL) {
+            if (firebaseConfig.apiKey && firebaseConfig.projectId) {
                 firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
                 db = firebase.database();
                 isCloudConnected = true;
                 document.getElementById('status-text').innerText = "🟢 Live Cloud Connected";
                 document.getElementById('status-text').className = "font-bold text-green-600";
+            } else {
+                // IF MISSING: SET TO DEMO MODE AUTOMATICALLY
+                console.warn("Firebase Config missing. Switching to DEMO MODE for OTP.");
+                document.getElementById('status-text').innerText = "🟡 Demo Mode (OTP)";
+                document.getElementById('status-text').className = "font-bold text-orange-500";
             }
-        } catch (e) { console.warn("Firebase Config missing. Using LocalStorage."); }
+        } catch (e) { console.error("Firebase Init Error", e); }
 
-        // --- 2. MEDICAL EXPERT SYSTEM ---
-        const MEDICAL_KNOWLEDGE_BASE = [
-            { keywords: ['chest', 'heart', 'attack', 'tightness', 'left arm'], urgency: 'critical', response: "⚠️ <strong>POTENTIAL EMERGENCY</strong>: Chest pain can indicate a heart attack. <br>1. Stop and rest.<br>2. Chew one adult aspirin unless allergic.<br>3. <strong>Call 911 immediately.</strong>" },
-            { keywords: ['breath', 'breathing', 'short', 'wheeze', 'asthma'], urgency: 'critical', response: "⚠️ <strong>RESPIRATORY DISTRESS</strong>: Shortness of breath is serious.<br>1. Sit upright.<br>2. Use an inhaler if prescribed.<br>3. Call Emergency Services if lips turn blue." },
-            { keywords: ['head', 'migraine', 'dizzy', 'vision', 'blur'], urgency: 'moderate', response: "🤒 <strong>Neurological Assessment</strong>: Could be a Migraine.<br>1. Rest in a dark, quiet room.<br>2. Hydrate.<br>3. Seek ER immediately if pain is sudden (Thunderclap)." },
-            { keywords: ['fever', 'hot', 'temperature', 'sweat'], urgency: 'moderate', response: "🤒 <strong>Systemic Infection</strong>: Elevated body temperature.<br>1. Monitor temperature. If >39°C, take Paracetamol.<br>2. Stay hydrated.<br>3. See a doctor if fever > 3 days." },
-            { keywords: ['cut', 'bleed', 'blood', 'wound', 'gash'], urgency: 'moderate', response: "🩸 <strong>Trauma Assessment</strong>: Apply direct pressure.<br>1. Elevate injured area.<br>2. Clean with water.<br>3. Go to ER if bleeding doesn't stop after 10 mins." },
-            { keywords: ['stomach', 'pain', 'abdomen', 'nausea', 'vomit'], urgency: 'moderate', response: "🤢 <strong>Gastrointestinal Issue</strong>: Could be food poisoning.<br>1. Avoid solid food.<br>2. Sip water.<br>3. Seek doctor if pain is in lower right side (Appendicitis)." },
-            { keywords: ['broken', 'fracture', 'bone', 'snap', 'deform'], urgency: 'high', response: "🦴 <strong>Musculoskeletal Injury</strong>: Do not move limb.<br>1. Immobilize area.<br>2. Apply ice.<br>3. Go to Urgent Care for X-rays." },
-            { keywords: ['allergy', 'swelling', 'throat', 'rash', 'hives'], urgency: 'high', response: "🌿 <strong>Allergic Reaction</strong>: Could be Anaphylaxis.<br>1. Use EpiPen if available.<br>2. Watch for throat swelling.<br>3. Call Emergency Services if breathing is affected." },
-            { keywords: ['burn', 'fire', 'scald', 'skin'], urgency: 'moderate', response: "🔥 <strong>Burn Assessment</strong>: Cool burn with running water for 10-20 mins.<br>1. Do not apply butter/ice.<br>2. Cover loosely.<br>3. Seek help if burn is deep or on face." },
-            { keywords: ['eye', 'vision', 'blind', 'flash'], urgency: 'high', response: "👁️ <strong>Ocular Emergency</strong>: Do not rub eye.<br>1. Flush with water if chemicals involved.<br>2. See ophthalmologist/ER immediately if vision is lost." }
-        ];
-
-        function generateMedicalResponse(input) {
-            const lowerInput = input.toLowerCase();
-            let bestMatch = null;
-            let maxMatches = 0;
-            MEDICAL_KNOWLEDGE_BASE.forEach(entry => {
-                let matches = 0;
-                entry.keywords.forEach(kw => { if (lowerInput.includes(kw)) matches++; });
-                if (matches > 0 && matches >= maxMatches) { maxMatches = matches; bestMatch = entry; }
-            });
-            if (bestMatch) {
-                let className = bestMatch.urgency === 'critical' ? 'border-l-4 border-red-500 bg-red-50' : (bestMatch.urgency === 'high' ? 'border-l-4 border-orange-400 bg-orange-50' : 'border-l-4 border-blue-400 bg-blue-50');
-                return `<div class="${className} p-3 rounded-lg text-sm text-slate-800 leading-relaxed">${bestMatch.response}</div><div class="text-xs text-slate-400 mt-2 italic">AI Triage Suggestion. Confirm with a professional.</div>`;
-            }
-            if (lowerInput.includes('appointment') || lowerInput.includes('book')) return "To book an appointment, please use the 'My Health' tab.";
-            if (lowerInput.includes('doctor')) return "We have specialists in Cardiology, Orthopedics, and General Medicine.";
-            if (lowerInput.includes('hello') || lowerInput.includes('hi')) return "Hello! I'm here to help. Describe your symptoms.";
-            return "I'm not sure about that. Please consult a professional or call emergency services if critical.";
-        }
-
-        // --- 3. DATA & STATE ---
+        // --- 2. DATA & STATE ---
         const defaultDB = {
             users: [
                 { u: 'admin', p: '123', r: 'admin', n: 'Admin User' },
@@ -271,7 +275,10 @@
         let currentUser = null;
         let authMode = 'login';
         let selectedRole = 'patient';
-
+        
+        // Real Auth Vars
+        let windowConfirmationResult = null;
+        
         const HOSPITALS = [
             { name: "City General Hospital", loc: "Downtown District", dist: "1.2 km", rating: 4.8, icon: "🏙️" },
             { name: "St. Mary's Medical Center", loc: "Westside", dist: "4.5 km", rating: 4.5, icon: "⛪" },
@@ -301,7 +308,7 @@
         }
         loadAndListen();
 
-        // --- 4. AUTH LOGIC ---
+        // --- 3. AUTH LOGIC ---
         function setAuthMode(mode) {
             authMode = mode;
             const bg = document.getElementById('switch-bg');
@@ -309,6 +316,16 @@
             const signupTab = document.getElementById('tab-signup');
             const roleDiv = document.getElementById('role-select');
             const btnText = document.getElementById('auth-btn-text');
+            const captchaDiv = document.getElementById('captcha-container');
+            const signupDiv = document.getElementById('signup-fields');
+            
+            // Reset
+            document.getElementById('username').value = "";
+            document.getElementById('password').value = "";
+            document.getElementById('captcha-input').value = "";
+            document.getElementById('otp-input').value = "";
+            windowConfirmationResult = null;
+
             if (mode === 'login') {
                 bg.style.left = '4px';
                 loginTab.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
@@ -317,6 +334,9 @@
                 signupTab.classList.add('text-slate-500');
                 roleDiv.classList.add('hidden');
                 btnText.innerText = 'Login';
+                captchaDiv.classList.remove('hidden');
+                signupDiv.classList.add('hidden');
+                drawCaptcha(); 
             } else {
                 bg.style.left = 'calc(50% + 4px)';
                 signupTab.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
@@ -326,36 +346,178 @@
                 roleDiv.classList.remove('hidden');
                 roleDiv.classList.add('animate-fade-in');
                 btnText.innerText = 'Create Account';
+                captchaDiv.classList.add('hidden');
+                signupDiv.classList.remove('hidden');
             }
         }
-        function selectRole(role, btn) {
-            selectedRole = role;
-            document.querySelectorAll('.role-card').forEach(b => { b.classList.remove('border-indigo-500', 'ring-2', 'ring-indigo-200', 'bg-indigo-50'); b.classList.add('border-slate-200'); });
-            btn.classList.remove('border-slate-200');
-            btn.classList.add('border-indigo-500', 'ring-2', 'ring-indigo-200', 'bg-indigo-50');
+
+        // --- REAL / HYBRID OTP REQUEST ---
+        function requestOTP() {
+            const phone = document.getElementById('phone').value.trim();
+            if (!phone) {
+                showToast("Please enter a phone number", 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('get-otp-btn');
+
+            // Check if we have real Firebase Auth
+            if (auth) {
+                // --- REAL MODE ---
+                btn.disabled = true;
+                btn.innerText = "Sending...";
+                
+                if (!window.recaptchaVerifier) {
+                    // Create Recaptcha only once
+                    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container');
+                }
+
+                auth.signInWithPhoneNumber(phone, window.recaptchaVerifier)
+                .then((confirmationResult) => {
+                    windowConfirmationResult = confirmationResult;
+                    btn.disabled = false;
+                    btn.innerText = "Resend OTP";
+                    showToast("OTP sent to your phone!", 'success');
+                })
+                .catch((error) => {
+                    console.error("Firebase Auth Error", error);
+                    btn.disabled = false;
+                    btn.innerText = "Get OTP";
+                    
+                    // Fallback to DEMO MODE if error suggests API issues (optional safeguard)
+                    if(error.code === 'auth/invalid-api-key' || error.code === 'auth/network-request-failed') {
+                         showToast("API Error. Switching to Demo Mode.", 'warning');
+                         runDemoOTP();
+                    } else {
+                        showToast("Error: " + error.message, 'error');
+                    }
+                });
+            } else {
+                // --- DEMO MODE ---
+                runDemoOTP();
+            }
         }
+
+        function runDemoOTP() {
+            const phone = document.getElementById('phone').value.trim();
+            const btn = document.getElementById('get-otp-btn');
+            btn.disabled = true;
+            btn.innerText = "Generating...";
+
+            setTimeout(() => {
+                const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+                windowConfirmationResult = {
+                    confirm: (code) => {
+                        if(code === generatedOTP) {
+                            return Promise.resolve({ user: { uid: 'demo_user_' + Date.now() } });
+                        } else {
+                            return Promise.reject({ code: 'auth/invalid-verification-code' });
+                        }
+                    }
+                };
+                
+                // Simulate the result object structure
+                showToast(`DEMO MODE: OTP is ${generatedOTP}`, 'info');
+                
+                btn.disabled = false;
+                btn.innerText = "Get OTP (Demo)";
+            }, 1000);
+        }
+
         function handleAuth(e) {
             e.preventDefault();
             const u = document.getElementById('username').value.trim();
             const p = document.getElementById('password').value.trim();
             const btn = document.getElementById('auth-btn');
+            
             if (!u || !p) { showToast('Please fill all fields', 'error'); return; }
+
             if (authMode === 'login') {
+                // Login Logic (Check Captcha first)
+                const captchaInput = document.getElementById('captcha-input').value.toUpperCase();
+                if (captchaInput !== currentCaptcha) {
+                    showToast('Invalid Captcha. Try again.', 'error');
+                    drawCaptcha();
+                    return;
+                }
+
                 const user = DB.users.find(x => x.u === u && x.p === p);
-                if (user) { currentUser = user; enterApp(); } else { showToast('Invalid Credentials', 'error'); }
+                if (user) { currentUser = user; enterApp(); } 
+                else { showToast('Invalid Credentials', 'error'); }
+
             } else { 
-                if (DB.users.find(x => x.u === u)) { showToast('Username already exists', 'error'); return; }
-                btn.innerHTML = `<span class="animate-spin inline-block mr-2">⌛</span> Creating Account...`;
-                btn.disabled = true;
-                setTimeout(() => {
-                    const newUser = { u, p, r: selectedRole, n: u };
-                    DB.users.push(newUser);
-                    saveDB();
-                    currentUser = newUser;
-                    showToast(`Account Created`, 'success');
-                    enterApp();
-                }, 800);
+                // SIGNUP LOGIC
+                // Verify OTP
+                const otpInput = document.getElementById('otp-input').value.trim();
+
+                if (!windowConfirmationResult) {
+                    showToast('Please request OTP first.', 'warning');
+                    return;
+                }
+
+                // Use the confirm function (works for both Real and Demo)
+                windowConfirmationResult.confirm(otpInput)
+                    .then((result) => {
+                        // Verification Success
+                        if (DB.users.find(x => x.u === u)) { 
+                            showToast('Username already exists', 'error'); 
+                            return; 
+                        }
+                        
+                        btn.innerHTML = `<span class="animate-spin inline-block mr-2">⌛</span> Creating Account...`;
+                        btn.disabled = true;
+                        setTimeout(() => {
+                            const newUser = { u, p, r: selectedRole, n: u, phone: document.getElementById('phone').value };
+                            DB.users.push(newUser);
+                            saveDB();
+                            currentUser = newUser;
+                            showToast(`Account Created`, 'success');
+                            enterApp();
+                        }, 800);
+                    })
+                    .catch((error) => {
+                        console.error("OTP Error", error);
+                        showToast('Invalid OTP Code', 'error');
+                    });
             }
+        }
+
+        // ... (Canvas Captcha Logic - Kept for Login) ...
+        let currentCaptcha = "";
+        function drawCaptcha() {
+            const canvas = document.getElementById('captchaCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#f1f5f9';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 5; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+            currentCaptcha = code;
+            ctx.font = 'bold 24px Arial';
+            ctx.textBaseline = 'middle';
+            for(let i=0; i<code.length; i++) {
+                ctx.save();
+                ctx.fillStyle = `hsl(${Math.random()*360}, 60%, 50%)`;
+                ctx.translate(15 + i*20, 20);
+                ctx.rotate((Math.random() - 0.5) * 0.4);
+                ctx.fillText(code[i], 0, 0);
+                ctx.restore();
+            }
+            for(let i=0; i<7; i++) {
+                ctx.strokeStyle = `rgba(0,0,0,${Math.random()*0.5})`;
+                ctx.beginPath();
+                ctx.moveTo(Math.random()*canvas.width, Math.random()*canvas.height);
+                ctx.lineTo(Math.random()*canvas.width, Math.random()*canvas.height);
+                ctx.stroke();
+            }
+        }
+
+        function selectRole(role, btn) {
+            selectedRole = role;
+            document.querySelectorAll('.role-card').forEach(b => { b.classList.remove('border-indigo-500', 'ring-2', 'ring-indigo-200', 'bg-indigo-50'); b.classList.add('border-slate-200'); });
+            btn.classList.remove('border-slate-200');
+            btn.classList.add('border-indigo-500', 'ring-2', 'ring-indigo-200', 'bg-indigo-50');
         }
         function enterApp() {
             document.getElementById('auth-container').classList.add('hidden');
@@ -368,19 +530,16 @@
         }
         function logout() { location.reload(); }
 
-        // --- RESPONSIVE NAVIGATION ---
+        // --- NAVIGATION ---
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
             const isClosed = sidebar.classList.contains('-translate-x-full');
-            
             if (isClosed) {
-                // Open
                 sidebar.classList.remove('-translate-x-full');
                 overlay.classList.remove('hidden');
                 setTimeout(() => overlay.classList.remove('opacity-0'), 10);
             } else {
-                // Close
                 sidebar.classList.add('-translate-x-full');
                 overlay.classList.add('opacity-0');
                 setTimeout(() => overlay.classList.add('hidden'), 300);
@@ -406,7 +565,7 @@
                     item.onclick = (e) => { 
                         e.preventDefault(); 
                         navigate(r.id); 
-                        if(window.innerWidth < 768) toggleSidebar(); // Close sidebar on mobile click
+                        if(window.innerWidth < 768) toggleSidebar(); 
                     };
                     menu.appendChild(item);
                 }
@@ -426,15 +585,13 @@
             else if (viewId === 'nurse-dashboard') renderNurse(content);
         }
 
-        // --- 6. VIEW: PATIENT (AUTO CONNECT) ---
+        // --- 6. VIEW: PATIENT ---
         function renderPatient(c) {
             c.innerHTML = `
             <div class="mb-6">
                 <h2 class="text-2xl md:text-4xl font-extrabold text-slate-800 tracking-tight">Welcome Back, <span class="text-indigo-600">${currentUser.n}</span></h2>
                 <p class="text-slate-500 text-sm md:text-base">Manage your health, book appointments, or perform a quick self-check.</p>
             </div>
-
-            <!-- Quick Emergency Banner -->
             <div class="mb-8 rounded-2xl overflow-hidden shadow-lg border-2 border-red-500 animate-fade-in cursor-pointer hover:shadow-2xl transition-shadow" onclick="startEmergencyProtocol()">
                 <div class="ambulance-alert-bg p-1"></div>
                 <div class="bg-red-600 p-4 flex items-center justify-between text-white relative z-10">
@@ -453,11 +610,7 @@
                     </div>
                 </div>
             </div>
-
-            <!-- ROW 1: APPOINTMENT & SELF CHECK -->
             <div class="grid lg:grid-cols-2 gap-6 md:gap-8 mb-10">
-                
-                <!-- Booking Form -->
                 <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-500">
                     <div class="flex items-center gap-3 mb-6 md:mb-8">
                         <div class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-lg">AI POWERED</div>
@@ -467,7 +620,7 @@
                         <div><label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Full Name</label><input type="text" id="p-name" value="${currentUser.n}" readonly class="w-full px-4 md:px-5 py-3.5 rounded-2xl bg-slate-50 border-none text-slate-400 font-medium text-sm shadow-inner"></div>
                         <div class="grid grid-cols-2 gap-4">
                             <div><label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Age</label><input type="number" id="p-age" required class="w-full px-4 md:px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all duration-300"></div>
-                            <div><label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Phone</label><input type="text" id="p-phone" required class="w-full px-4 md:px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all duration-300"></div>
+                            <div><label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Phone</label><input type="text" id="p-phone" value="${currentUser.phone || ''}" placeholder="Mobile" class="w-full px-4 md:px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all duration-300"></div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2 ml-1">Primary Issue</label>
@@ -487,8 +640,6 @@
                         </button>
                     </form>
                 </div>
-
-                <!-- Self Health Check -->
                 <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 md:p-8 shadow-xl text-white relative overflow-hidden flex flex-col justify-between">
                     <div class="absolute -right-6 -bottom-6 text-9xl opacity-10 text-indigo-500">💓</div>
                     <div>
@@ -499,7 +650,6 @@
                             <h3 class="font-bold text-xl md:text-2xl">AI Self-Check</h3>
                         </div>
                         <p class="text-slate-400 text-sm mb-6">Enter your current vitals for an instant AI health assessment.</p>
-                        
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -520,52 +670,37 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="mt-6">
                         <button onclick="runPatientSelfCheck()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2">
                             <span>Analyze My Health</span>
                             <span>🤖</span>
                         </button>
-                        
                         <div id="self-check-result" class="hidden mt-4 animate-fade-in">
                             <div class="h-px w-full bg-slate-600 my-4"></div>
-                            <div id="sc-content" class="bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-sm">
-                                <!-- Dynamic Result Here -->
-                            </div>
+                            <div id="sc-content" class="bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-sm"></div>
                         </div>
                     </div>
                 </div>
-
             </div>
-
-            <!-- Specialists -->
             <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-100 mb-10">
                 <h3 class="font-bold text-lg md:text-xl text-slate-800 mb-6">Our Specialists</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     ${DB.doctors.map(d => `<div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 transition-colors group border border-transparent hover:border-indigo-100"><div class="w-14 h-14 bg-white rounded-full flex items-center justify-center text-3xl shadow-md group-hover:scale-110 transition-transform duration-300">👨‍⚕️</div><div><div class="font-bold text-slate-900 text-lg">${d.n}</div><div class="text-sm text-slate-500 font-medium">${d.spec} Expert</div><div class="flex items-center gap-1 mt-1"><span class="text-xs text-yellow-500 bg-yellow-50 px-2 py-0.5 rounded-full">★</span><span class="text-xs text-indigo-500">AI Recommended</span></div></div></div>`).join('')}
                 </div>
             </div>
-
-            <!-- Hospital Network -->
             <div class="animate-fade-in">
-                <h3 class="text-xl md:text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                    <span class="text-3xl">🏥</span> Our Hospital Network
-                </h3>
+                <h3 class="text-xl md:text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2"><span class="text-3xl">🏥</span> Our Hospital Network</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     ${HOSPITALS.map(h => `
                     <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between h-full group cursor-pointer">
                         <div>
                             <div class="flex justify-between items-start mb-3">
-                                <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-2xl group-hover:bg-indigo-100 transition-colors">
-                                    ${h.icon}
-                                </div>
-                                <div class="bg-emerald-50 text-emerald-700 text-xs font-bold px-2 py-1 rounded-lg flex items-center gap-1">
-                                    ⭐ ${h.rating}
-                                </div>
+                                <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-2xl group-hover:bg-indigo-100 transition-colors">${h.icon}</div>
+                                <div class="bg-emerald-50 text-emerald-700 text-xs font-bold px-2 py-1 rounded-lg flex items-center gap-1">⭐ ${h.rating}</div>
                             </div>
                             <h4 class="font-bold text-slate-800 text-lg mb-1 group-hover:text-indigo-600 transition-colors">${h.name}</h4>
                             <div class="flex items-center gap-2 text-sm text-slate-500 mb-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 116 0z"></path></svg>
                                 ${h.loc}
                             </div>
                         </div>
@@ -576,18 +711,14 @@
                     </div>
                     `).join('')}
                 </div>
-            </div>
             `;
         }
 
-        // --- AMBULANCE / EMERGENCY PROTOCOL ---
+        // --- EMERGENCY PROTOCOL ---
         function startEmergencyProtocol() {
             const overlay = document.getElementById('emergency-overlay');
             const content = document.getElementById('emergency-content');
-
             overlay.classList.remove('hidden');
-
-            // Phase 1: Dialing
             content.innerHTML = `
                 <div class="animate-bounce">
                     <div class="text-6xl md:text-8xl mb-6">🚨</div>
@@ -597,15 +728,12 @@
                     <div class="text-sm md:text-base text-red-200 mt-4">Please stay calm.</div>
                 </div>
             `;
-
-            // Phase 2: Connected
             setTimeout(() => {
                 try {
                     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2522/2522-preview.mp3'); 
                     audio.volume = 0.5;
                     audio.play().catch(e => console.log("Audio play failed"));
                 } catch(e) {}
-
                 content.innerHTML = `
                     <div class="animate-slide-up">
                         <div class="w-20 h-20 md:w-24 md:h-24 bg-green-500 rounded-full mx-auto mb-6 flex items-center justify-center shadow-2xl ring-4 ring-green-300">
@@ -620,85 +748,47 @@
                 `;
             }, 3000);
         }
-
         function endEmergency() {
-            const overlay = document.getElementById('emergency-overlay');
-            overlay.classList.add('hidden');
+            document.getElementById('emergency-overlay').classList.add('hidden');
             showToast('Emergency session ended.', 'success');
         }
 
-        // --- PATIENT SELF CHECK LOGIC (AUTO CONNECT) ---
+        // --- PATIENT SELF CHECK ---
         function runPatientSelfCheck() {
             const temp = parseFloat(document.getElementById('sc-temp').value);
             const hr = parseInt(document.getElementById('sc-hr').value);
             const sys = parseInt(document.getElementById('sc-bp-sys').value);
             const dia = parseInt(document.getElementById('sc-bp-dia').value);
-            
-            if (!temp || !hr || !sys || !dia) {
-                showToast("Please fill all vitals", 'error');
-                return;
-            }
-
+            if (!temp || !hr || !sys || !dia) { showToast("Please fill all vitals", 'error'); return; }
             const resBox = document.getElementById('self-check-result');
             const content = document.getElementById('sc-content');
-            
             resBox.classList.remove('hidden');
             content.innerHTML = `<div class="flex items-center gap-3"><div class="animate-spin text-indigo-400">⌛</div><span>Analyzing Vitals...</span></div>`;
-
             setTimeout(() => {
                 let risks = [];
                 let statusColor = 'text-green-400';
                 let statusIcon = '🟢';
-                let recommendation = "Your vitals look normal. Keep up the healthy lifestyle!";
-
-                // Logic
-                if (temp > 38.5) risks.push("High Fever");
-                else if (temp > 37.5) risks.push("Mild Fever");
-
-                if (hr > 110) risks.push("Elevated Heart Rate");
-                else if (hr > 100) risks.push("Slightly High Heart Rate");
-
-                if (sys > 140 || dia > 90) risks.push("Hypertension");
-                else if (sys > 120 || dia > 80) risks.push("Elevated BP");
-                else if (sys < 90) risks.push("Low BP");
-
+                let recommendation = "Your vitals look normal. Keep up healthy lifestyle!";
+                if (temp > 38.5) risks.push("High Fever"); else if (temp > 37.5) risks.push("Mild Fever");
+                if (hr > 110) risks.push("Elevated Heart Rate"); else if (hr > 100) risks.push("Slightly High Heart Rate");
+                if (sys > 140 || dia > 90) risks.push("Hypertension"); else if (sys > 120 || dia > 80) risks.push("Elevated BP"); else if (sys < 90) risks.push("Low BP");
                 let isCritical = false;
                 if (risks.length >= 2 || (temp > 39 || hr > 120 || sys > 160)) {
-                    statusColor = 'text-red-400';
-                    statusIcon = '🔴';
-                    recommendation = "⚠️ Multiple abnormalities detected. Immediate attention required.";
-                    isCritical = true;
-                } else if (risks.length === 1) {
-                    statusColor = 'text-orange-400';
-                    statusIcon = '🟠';
-                    recommendation = "One parameter is off. Monitor closely.";
-                }
-
+                    statusColor = 'text-red-400'; statusIcon = '🔴'; recommendation = "⚠️ Multiple abnormalities detected. Immediate attention required."; isCritical = true; 
+                } else if (risks.length === 1) { statusColor = 'text-orange-400'; statusIcon = '🟠'; recommendation = "One parameter is off. Monitor closely."; }
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-3">
-                        <div class="font-bold text-lg md:text-xl ${statusColor} flex items-center gap-2">
-                            ${statusIcon} ${risks.length === 0 ? 'Healthy' : 'Attention Needed'}
-                        </div>
+                        <div class="font-bold text-lg md:text-xl ${statusColor} flex items-center gap-2">${statusIcon} ${risks.length === 0 ? 'Healthy' : 'Attention Needed'}</div>
                         <div class="text-xs font-mono text-slate-400 bg-slate-800 px-2 py-1 rounded">AI VERIFIED</div>
                     </div>
                     <div class="space-y-2 mb-4 text-sm text-slate-300">
-                        <div class="flex justify-between border-b border-slate-700 pb-1">
-                            <span>Temperature:</span> <span class="${temp>37.5?'text-red-300':'text-slate-300'} font-mono">${temp}°C</span>
-                        </div>
-                        <div class="flex justify-between border-b border-slate-700 pb-1">
-                            <span>Heart Rate:</span> <span class="${hr>100?'text-red-300':'text-slate-300'} font-mono">${hr} bpm</span>
-                        </div>
-                        <div class="flex justify-between border-b border-slate-700 pb-1">
-                            <span>BP:</span> <span class="${sys>120?'text-red-300':'text-slate-300'} font-mono">${sys}/${dia}</span>
-                        </div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1"><span>Temperature:</span> <span class="${temp>37.5?'text-red-300':'text-slate-300'} font-mono">${temp}°C</span></div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1"><span>Heart Rate:</span> <span class="${hr>100?'text-red-300':'text-slate-300'} font-mono">${hr} bpm</span></div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1"><span>BP:</span> <span class="${sys>120?'text-red-300':'text-slate-300'} font-mono">${sys}/${dia}</span></div>
                     </div>
                     <p class="text-sm text-white leading-relaxed">${recommendation}</p>
                 `;
-
-                if (isCritical) {
-                    setTimeout(() => { startEmergencyProtocol(); }, 1500);
-                }
-
+                if (isCritical) { setTimeout(() => { startEmergencyProtocol(); }, 1500); }
             }, 1000);
         }
 
@@ -743,19 +833,14 @@
         function renderAdmin(c) {
             const pending = DB.appointments.filter(a => a.status === 'pending');
             const history = DB.appointments.filter(a => a.status !== 'pending').sort((a,b) => b.id - a.id);
-            
             c.innerHTML = `
-            <div class="flex flex-col md:flex-row justify-between md:items-end mb-8 md:mb-10 gap-4">
+            <div class="flex flex flex-col md:flex-row justify-between md:items-end mb-8 md:mb-10 gap-4">
                 <h2 class="text-2xl md:text-4xl font-extrabold text-slate-800">Admin Dashboard</h2>
                 <span class="bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm animate-pulse-fast w-max">${pending.length} Pending</span>
             </div>
-
-            <!-- SECTION 1: PENDING REQUESTS -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
                 ${pending.length === 0 ? `<div class="col-span-full bg-white p-12 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in"><div class="text-5xl mb-4 opacity-40">📭</div><h3 class="text-xl font-bold text-slate-800">No Pending Requests</h3></div>` : pending.map(a => `<div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between h-full relative overflow-hidden"><div class="mb-6"><div class="flex justify-between items-start"><div class="font-bold text-lg md:text-xl text-slate-800">${a.n}</div><span class="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border border-yellow-200">PENDING</span></div><div class="text-sm text-slate-500 space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-100"><div class="flex items-center gap-2"><span>📞</span> ${a.phone}</div><div class="flex items-center gap-2"><span>🎂</span> ${a.age} Years Old</div><div class="mt-3 pt-3 border-t border-slate-100 border-dashed">Issue: <span class="font-bold text-slate-700 ml-2">${a.issue}</span></div></div></div><button onclick="approveReq(${a.id}, this)" class="w-full mt-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 md:py-4 rounded-2xl shadow-lg hover:shadow-2xl transform active:scale-95 transition-all duration-200">Approve & Assign</button></div>`).join('')}
             </div>
-
-            <!-- SECTION 2: AI PATIENT DATABASE -->
             <div class="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in">
                 <div class="p-4 md:p-6 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div class="flex items-center gap-3">
@@ -786,7 +871,7 @@
         function getLevelColor(level) {
             if(!level) return 'bg-slate-100 text-slate-400';
             if(level.includes('Critical')) return 'bg-red-100 text-red-700 border border-red-200';
-            if(level.includes('Urgent')) return 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+            if(level.includes('Urgent')) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
             return 'bg-green-100 text-green-700 border border-green-200';
         }
         function getStatusBadge(status) {
@@ -812,7 +897,7 @@
         // --- 8. VIEW: DOCTOR ---
         function renderDoctor(c) {
             const patients = DB.appointments.filter(a => a.status === 'accepted');
-            c.innerHTML = `<h2 class="text-2xl md:text-4xl font-extrabold text-slate-800 mb-8 md:mb-10">AI Diagnosis Center</h2>${patients.length === 0 ? `<div class="bg-white p-12 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in"><div class="text-5xl mb-4 opacity-40">🩺</div><h3 class="text-xl font-bold text-slate-800">Waiting Room Empty</h3></div>` : `<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">${patients.map(a => `
+            c.innerHTML = `<h2 class="text-2xl md:text-4xl font-extrabold text-slate-800 mb-8 md:mb-10">AI Diagnosis Center</h2>${patients.length === 0 ? `<div class="bg-white p-12 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in"><div class="text-5xl mb-4 opacity-40">🩺</div><h3 class="text-xl font-bold text-slate-800">Waiting Room Empty</h3></div>` : `<div class="grid grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">${patients.map(a => `
                 <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-100 hover:shadow-2xl transition-all duration-300">
                     <div class="flex justify-between items-center mb-6">
                         <div class="font-bold text-xl md:text-2xl text-slate-800">${a.n}</div>
@@ -855,12 +940,10 @@
                 let disease = "Viral Fever";
                 let level = "Stable (ESI 3)";
                 let suggestedMeds = ["Paracetamol 500mg", "ORS (Hydration)", "Bed Rest"];
-
                 if(temp > 39 && hr > 100) { disease = "Sepsis / Critical"; level = "Critical (ESI 1)"; suggestedMeds = ["IV Antibiotics", "Vasopressors", "ICU Admission"]; } 
                 else if(hr > 110) { disease = "Tachycardia"; level = "Urgent (ESI 2)"; suggestedMeds = ["Beta Blockers", "ECG Monitoring", "Sedation"]; } 
                 else if(temp > 38) { disease = "High Grade Fever"; level = "Urgent (ESI 2)"; suggestedMeds = ["Ibuprofen", "Cold Compress", "Fluid Intake"]; }
                 else if(Math.random() > 0.7) { disease = "Bone Fracture"; level = "Urgent (ESI 2)"; suggestedMeds = ["Analgesics", "Calcium", "Immobilization"]; }
-
                 apt.disease = disease; apt.level = level; apt.vitals = { hr, temp }; apt.meds = suggestedMeds; apt.status = 'diagnosed';
                 resBox.classList.remove('hidden');
                 setTimeout(() => { resBox.querySelector('.bg-emerald-500').style.width = '98%'; document.getElementById(`disease-${id}`).innerText = disease; }, 100);
@@ -889,18 +972,15 @@
             const bestRoughBed = DB.roughBeds.find(b => b.status === 'free');
             const mainFree = DB.beds.filter(b => b.status === 'free').length;
             const emgFree = DB.roughBeds.filter(b => b.status === 'free').length;
-
             c.innerHTML = `
             <h2 class="text-2xl md:text-4xl font-extrabold text-slate-800 mb-6 md:mb-8">Smart Bed Management</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-fade-in">
+            <div class="grid grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-fade-in">
                 <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 flex items-center justify-between"><div><div class="text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Main Ward</div><div class="text-3xl font-extrabold text-indigo-600">${mainFree} <span class="text-slate-300 text-lg font-normal">Free</span></div></div><div class="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-2xl">🏥</div></div>
                 <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 flex items-center justify-between"><div><div class="text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Emergency</div><div class="text-3xl font-extrabold text-red-600">${emgFree} <span class="text-slate-300 text-lg font-normal">Free</span></div></div><div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-2xl">🚑</div></div>
             </div>
-
             <div class="grid lg:grid-cols-12 gap-6 md:gap-8 items-start">
                 <div class="lg:col-span-4 space-y-6">
-                    ${patients.length === 0 ? `<div class="bg-white p-8 rounded-3xl text-center shadow-xl border border-slate-100"><div class="text-4xl mb-2 opacity-40">✅</div><h3 class="font-bold text-slate-800">No Patients Waiting</h3></div>` : patients.map(a => `
+                    ${patients.length === 0 ? `<div class="bg-white p-8 rounded-3xl text-center shadow-xl border border-slate-100 animate-fade-in"><div class="text-4xl mb-2 opacity-40">✅</div><h3 class="font-bold text-slate-800">No Patients Waiting</h3></div>` : patients.map(a => `
                         <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 animate-fade-in">
                             <div class="flex justify-between items-center mb-4">
                                 <div class="font-bold text-lg text-slate-800">${a.n}</div>
@@ -910,12 +990,9 @@
                                 <div>Diagnosis: <span class="font-bold text-red-600">${a.disease}</span></div>
                                 <div class="flex gap-4"><span>HR: <span class="font-medium">${a.vitals.hr}</span></span> • <span>Temp: <span class="font-medium">${a.vitals.temp}°C</span></span></div>
                                 
-                                <!-- DYNAMIC MEDICINE DISPLAY -->
                                 ${a.meds && a.meds.length > 0 ? `
                                 <div class="mt-3 pt-3 border-t-2 border-dashed border-slate-200">
-                                    <div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase mb-2">
-                                        <span class="animate-pulse">💊</span> Prescribed
-                                    </div>
+                                    <div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase mb-2"><span class="animate-pulse">💊</span> Prescribed</div>
                                     <div class="flex flex-wrap gap-1.5">
                                         ${a.meds.map(m => `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-1 rounded-md text-xs font-semibold shadow-sm">${m}</span>`).join('')}
                                     </div>
@@ -926,19 +1003,14 @@
                         </div>
                     `).join('')}
                 </div>
-
                 <div class="lg:col-span-8 space-y-8">
                     <div>
                         <div class="flex items-center justify-between mb-4"><h3 class="font-bold text-lg text-slate-700 flex items-center gap-2"><span class="bg-red-100 text-red-600 p-1.5 rounded-lg text-sm">R1-R5</span> Emergency Triage</h3></div>
-                        <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-100">
-                            <div class="grid grid-cols-5 gap-3 md:gap-4">${DB.roughBeds.map(b => generateBedHTML(b, bestBed, true)).join('')}</div>
-                        </div>
+                        <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-100"><div class="grid grid-cols-5 gap-3 md:gap-4">${DB.roughBeds.map(b => generateBedHTML(b, bestBed, true)).join('')}</div></div>
                     </div>
                     <div>
                         <div class="flex items-center justify-between mb-4"><h3 class="font-bold text-lg text-slate-700 flex items-center gap-2"><span class="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg text-sm">E1-E20</span> Main Ward (General)</h3></div>
-                        <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-100">
-                            <div class="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">${DB.beds.map(b => generateBedHTML(b, bestBed, false)).join('')}</div>
-                        </div>
+                        <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-100"><div class="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">${DB.beds.map(b => generateBedHTML(b, bestBed, false)).join('')}</div></div>
                     </div>
                 </div>
             </div>`;
@@ -990,7 +1062,7 @@
                     setTimeout(() => renderNurse(document.getElementById('main-content')), 1500);
                 } else {
                     resTxt.innerText = "❌ Hospital Full";
-                    resBox.className = "rounded-2xl p-3 mb-4 text-sm text-red-800 flex items-center gap-2 bg-red-50 border border-red-200";
+                    resBox.className = "rounded-2xl p-3 mb-4 text-sm text-red-800 flex items-center gap-2 bg-red-50 border-red-200";
                     showToast('Capacity Reached', 'error');
                     btn.disabled = false;
                     btn.innerHTML = 'Retry';
@@ -998,20 +1070,51 @@
             }, 1000);
         }
 
-        // --- 10. CHATBOT ---
+        // --- CHATBOT & VOICE ---
         function toggleChat() {
             const win = document.getElementById('chat-window');
             const btn = document.getElementById('chat-toggle-btn');
             if (win.classList.contains('hidden')) {
                 win.classList.remove('hidden');
                 requestAnimationFrame(() => { win.classList.remove('scale-95', 'opacity-0'); win.classList.add('scale-100', 'opacity-100'); });
-                btn.innerHTML = '✕'; btn.classList.remove('bg-indigo-600', 'animate-pulse-fast', 'border-indigo-200', 'ring-indigo-200'); btn.classList.add('bg-slate-800', 'border-slate-300', 'ring-slate-300', 'scale-90');
+                btn.innerHTML = '✕'; btn.classList.remove('bg-indigo-600', 'animate-pulse-fast', 'border-indigo-200', 'ring-indigo-200'); btn.classList.add('bg-slate-800', 'border-slate-300', 'scale-90');
             } else {
                 win.classList.remove('scale-100', 'opacity-100');
                 win.classList.add('scale-95', 'opacity-0');
                 setTimeout(() => { win.classList.add('hidden'); }, 300);
-                btn.innerHTML = '💬'; btn.classList.add('bg-indigo-600', 'animate-pulse-fast', 'border-indigo-200', 'ring-indigo-200'); btn.classList.remove('bg-slate-800', 'border-slate-300', 'ring-slate-300', 'scale-90');
+                btn.innerHTML = '💬'; btn.classList.add('bg-indigo-600', 'animate-pulse-fast', 'border-indigo-200', 'ring-indigo-200'); btn.classList.remove('bg-slate-800', 'border-slate-300', 'scale-90');
             }
+        }
+        function startVoiceInput() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { showToast("Voice input not supported.", 'warning'); return; }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US'; recognition.interimResults = false; recognition.maxAlternatives = 1;
+            const btn = document.getElementById('voice-btn');
+            const originalBtnIcon = btn.innerHTML;
+            btn.classList.add('bg-red-100', 'text-red-600', 'animate-pulse');
+            btn.classList.remove('bg-slate-100', 'text-slate-500');
+            btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7 7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>`;
+            recognition.start();
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('chat-input').value = transcript;
+                btn.classList.remove('bg-red-100', 'text-red-600', 'animate-pulse');
+                btn.classList.add('bg-slate-100', 'text-slate-500');
+                btn.innerHTML = originalBtnIcon;
+                sendChat();
+            };
+            recognition.onerror = () => {
+                btn.classList.remove('bg-red-100', 'text-red-600', 'animate-pulse');
+                btn.classList.add('bg-slate-100', 'text-slate-500');
+                btn.innerHTML = originalBtnIcon;
+                showToast("Could not hear you.", 'warning');
+            };
+            recognition.onend = () => {
+                 btn.classList.remove('bg-red-100', 'text-red-600', 'animate-pulse');
+                 btn.classList.add('bg-slate-100', 'text-slate-500');
+                 btn.innerHTML = originalBtnIcon;
+            };
         }
         function sendChat() {
             const inp = document.getElementById('chat-input');
@@ -1027,15 +1130,33 @@
                 body.scrollTop = body.scrollHeight;
             }, 600);
         }
+        function generateMedicalResponse(input) {
+            const lowerInput = input.toLowerCase();
+            let bestMatch = null; let maxMatches = 0;
+            MEDICAL_KNOWLEDGE_BASE.forEach(entry => {
+                let matches = 0;
+                entry.keywords.forEach(kw => { if (lowerInput.includes(kw)) matches++; });
+                if (matches > 0 && matches >= maxMatches) { maxMatches = matches; bestMatch = entry; }
+            });
+            if (bestMatch) {
+                let className = bestMatch.urgency === 'critical' ? 'border-l-4 border-red-500 bg-red-50' : (bestMatch.urgency === 'high' ? 'border-l-4 border-orange-400 bg-orange-50' : 'border-l-4 border-blue-400 bg-blue-50');
+                return `<div class="${className} p-3 rounded-lg text-sm text-slate-800 leading-relaxed">${bestMatch.response}</div><div class="text-xs text-slate-400 mt-2 italic">AI Triage Suggestion.</div>`;
+            }
+            if (lowerInput.includes('appointment') || lowerInput.includes('book')) return "To book, use 'My Health'.";
+            if (lowerInput.includes('doctor')) return "We have specialists in Cardiology, Orthopedics, and General Medicine.";
+            if (lowerInput.includes('hello') || lowerInput.includes('hi')) return "Hello! I'm here to help.";
+            return "Please consult a professional.";
+        }
 
-        // --- 11. TOAST ---
         function showToast(msg, type) {
             const area = document.getElementById('toast-area');
             const t = document.createElement('div');
-            if(type === 'success') { t.className = "bg-slate-800 text-white px-6 py-3 md:px-8 md:py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-emerald-500"; } 
-            else if (type === 'warning') { t.className = "bg-slate-800 text-white px-6 py-3 md:px-8 md:py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-orange-500"; } 
-            else { t.className = "bg-red-500 text-white px-6 py-3 md:px-8 md:py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-red-200"; }
-            t.innerHTML = `<span class="text-xl">${type==='success'?'✅':(type==='warning'?'⚠️':'🚨')}</span> <span class="font-semibold text-sm md:text-lg">${msg}</span>`;
+            if (type === 'info') { t.className = "bg-slate-800 text-white px-6 py-3 md:px-8 md:py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-blue-500"; } 
+            else if(type === 'success') { t.className = "bg-slate-800 text-white px-6 py-3 md:px-8 md:py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border border-emerald-500"; } 
+            else if (type === 'warning') { t.className = "bg-slate-800 text-white px-6 py-3 md:px-8 md:py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border-orange-500"; } 
+            else { t.className = "bg-red-500 text-white px-6 py-3 md:px-8 md:py-4 rounded-full shadow-2xl flex items-center gap-3 animate-slide-up border-red-200"; } 
+            let icon = type==='success'?'✅':(type==='warning'?'⚠️':(type==='info'?'🔑':'🚨'));
+            t.innerHTML = `<span class="text-xl">${icon}</span> <span class="font-semibold text-sm md:text-lg">${msg}</span>`;
             area.appendChild(t);
             setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(20px)'; setTimeout(() => t.remove(), 300); }, 3000);
         }
